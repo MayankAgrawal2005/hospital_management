@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-white/20 dark:border-slate-800/50 shadow-xl;
+  }
+}
+
+/* Custom React Big Calendar Styles */
+.rbc-calendar {
+  font-family: inherit;
+}
+
+.rbc-btn-group button {
+  color: inherit !important;
+  border-color: #e2e8f0 !important; 
+}
+.rbc-btn-group button:hover, .rbc-btn-group button:focus {
+  background-color: #f8fafc !important;
+}
+.rbc-btn-group button.rbc-active {
+  background-color: #eff6ff !important;
+  color: #2563eb !important;
+  box-shadow: none !important;
+}
+
+/* Dark Mode Overrides for Calendar */
+.dark .rbc-calendar {
+  color: #cbd5e1; 
+}
+.dark .rbc-month-view,
+.dark .rbc-time-view,
+.dark .rbc-agenda-view,
+.dark .rbc-header,
+.dark .rbc-day-bg,
+.dark .rbc-month-row,
+.dark .rbc-time-header-content,
+.dark .rbc-time-content,
+.dark .rbc-timeslot-group,
+.dark .rbc-time-gutter,
+.dark .rbc-time-header.rbc-overflowing {
+  border-color: #334155 !important; 
+}
+
+.dark .rbc-off-range-bg {
+  background-color: #0f172a !important; 
+}
+
+.dark .rbc-today {
+  background-color: #1e293b !important; 
+}
+
+.dark .rbc-btn-group button {
+  color: #cbd5e1 !important;
+  border-color: #334155 !important;
+  background-color: transparent !important;
+}
+.dark .rbc-btn-group button:hover, .dark .rbc-btn-group button:focus {
+  background-color: #334155 !important;
+}
+.dark .rbc-btn-group button.rbc-active {
+  background-color: #1e3a8a !important; 
+  color: #60a5fa !important; 
+}
+.dark .rbc-toolbar button {
+  color: #cbd5e1 !important;
+}
+.dark .rbc-off-range {
+  color: #475569 !important; 
+}
+.dark .rbc-event {
+  background-color: rgba(59, 130, 246, 0.9) !important;
+  border: 1px solid rgba(59, 130, 246, 0.5) !important;
+}
