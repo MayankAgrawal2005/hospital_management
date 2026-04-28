@@ -35,7 +35,11 @@ const userSchema = new mongoose.Schema({
   specialization: String,
   experience: Number,
   fees: Number,
-  bio: String
+  bio: String,
+  availableSlots: {
+    type: [String],
+    default: ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"]
+  }
 });
 
 module.exports = mongoose.model("User", userSchema);

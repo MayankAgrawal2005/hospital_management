@@ -21,6 +21,11 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+const STANDARD_SLOTS = [
+  "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM", 
+  "01:00 PM", "02:00 PM", "03:00 PM", "04:00 PM", "05:00 PM"
+];
+
 export default function DoctorDashboard() {
   const navigate = useNavigate();
 
@@ -41,12 +46,14 @@ export default function DoctorDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingSecurity, setIsEditingSecurity] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [customSlot, setCustomSlot] = useState("");
   const [editForm, setEditForm] = useState({
     name: "",
     specialization: "",
     experience: "",
     fees: "",
-    bio: ""
+    bio: "",
+    availableSlots: []
   });
 
   useEffect(() => {
@@ -97,13 +104,45 @@ export default function DoctorDashboard() {
       specialization: user.specialization || "",
       experience: user.experience || "",
       fees: user.fees || "",
-      bio: user.bio || ""
+      bio: user.bio || "",
+      availableSlots: user.availableSlots || ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"]
     });
     setIsEditing(true);
   };
 
   const handleEditChange = (e) => {
     setEditForm({ ...editForm, [e.target.name]: e.target.value });
+  };
+
+  const toggleSlot = (slot) => {
+    setEditForm(prev => ({
+      ...prev,
+      availableSlots: prev.availableSlots.includes(slot)
+        ? prev.availableSlots.filter(s => s !== slot)
+        : [...prev.availableSlots, slot]
+    }));
+  };
+
+  const handleAddCustomSlot = () => {
+    if (!customSlot.trim()) return;
+    
+    let finalSlot = customSlot;
+    if (/^\d{2}:\d{2}$/.test(customSlot)) {
+      const [h, m] = customSlot.split(':');
+      let hours = parseInt(h, 10);
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      finalSlot = `${hours < 10 ? '0'+hours : hours}:${m} ${ampm}`;
+    }
+
+    if (!editForm.availableSlots.includes(finalSlot)) {
+      setEditForm(prev => ({
+        ...prev,
+        availableSlots: [...prev.availableSlots, finalSlot]
+      }));
+    }
+    setCustomSlot("");
   };
 
   const saveProfile = async () => {
@@ -130,11 +169,28 @@ export default function DoctorDashboard() {
   const cancelled = appointments.filter((a) => a.status === "cancelled").length;
 
   const events = appointments.map((a) => {
-    const startDate = new Date(a.date);
+    let startDate = new Date(a.date);
+    
+    if (a.time) {
+      const timeParts = a.time.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+      if (timeParts) {
+        let hours = parseInt(timeParts[1], 10);
+        const minutes = parseInt(timeParts[2], 10);
+        const ampm = timeParts[3];
+
+        if (ampm) {
+          if (ampm.toUpperCase() === 'PM' && hours < 12) hours += 12;
+          if (ampm.toUpperCase() === 'AM' && hours === 12) hours = 0;
+        }
+
+        startDate.setHours(hours, minutes, 0, 0);
+      }
+    }
+
     const endDate = new Date(startDate.getTime() + 60 * 60 * 1000); // assume 1hr
     return {
       id: a._id,
-      title: `${a.patientId?.name || "Unknown"} (${a.status})`,
+      title: `${a.appointmentType === "Online" ? "📹 " : ""}${a.patientId?.name || "Unknown"} (${a.status})`,
       start: startDate,
       end: endDate,
       status: a.status,
@@ -170,13 +226,23 @@ export default function DoctorDashboard() {
             <p>
               <strong>{event.original.patientId?.name}</strong> has a booked appointment.
             </p>
+            {event.original.appointmentType === "Online" && event.original.meetingLink && (
+              <a 
+                href={event.original.meetingLink} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg text-sm text-center font-bold border border-indigo-200 hover:bg-indigo-100 transition-colors block w-full"
+              >
+                📹 Join Video Call
+              </a>
+            )}
             <div className="flex gap-2">
               <button
                 onClick={() => {
                   completeAppointment(event.original._id);
                   toast.dismiss(t.id);
                 }}
-                className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm"
+                className="bg-green-500 text-white px-3 py-1.5 rounded-lg text-sm flex-1"
               >
                 Mark Done
               </button>
@@ -185,7 +251,7 @@ export default function DoctorDashboard() {
                   cancelAppointment(event.original._id);
                   toast.dismiss(t.id);
                 }}
-                className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm"
+                className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm flex-1"
               >
                 Cancel
               </button>
@@ -255,6 +321,52 @@ export default function DoctorDashboard() {
                     className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white transition-all resize-none"
                   ></textarea>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Time Slots</label>
+                  <div className="flex flex-wrap gap-2">
+                    {STANDARD_SLOTS.map(slot => (
+                      <button
+                        key={slot}
+                        onClick={() => toggleSlot(slot)}
+                        type="button"
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                          editForm.availableSlots.includes(slot)
+                            ? "bg-blue-500 border-blue-500 text-white shadow-md"
+                            : "bg-slate-100 border-slate-200 text-slate-500 hover:bg-slate-200 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-600"
+                        }`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                    {editForm.availableSlots.filter(s => !STANDARD_SLOTS.includes(s)).map(slot => (
+                      <button
+                        key={slot}
+                        onClick={() => toggleSlot(slot)}
+                        type="button"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all border bg-indigo-500 border-indigo-500 text-white shadow-md"
+                      >
+                        {slot} (Custom)
+                      </button>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-3 flex gap-2 max-w-xs">
+                    <input
+                      type="time"
+                      value={customSlot}
+                      onChange={(e) => setCustomSlot(e.target.value)}
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm font-medium text-gray-700 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomSlot}
+                      className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition-colors text-sm"
+                    >
+                      Add Custom
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-8 flex items-center justify-end gap-3">
@@ -282,7 +394,7 @@ export default function DoctorDashboard() {
       <AnimatePresence>
         {isEditingSecurity && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <motion.div 
+            <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
@@ -322,7 +434,7 @@ export default function DoctorDashboard() {
             <div className="w-20 h-20 bg-gradient-to-tr from-blue-500 to-indigo-500 rounded-full flex items-center justify-center text-3xl font-bold font-serif mb-4 shadow-md border-4 border-gray-800">
               {user.name?.charAt(0)}
             </div>
-            <h2 className="font-bold text-xl mb-1 truncate w-full px-2" title={user.name}>Dr. {user.name}</h2>
+            <h2 className="font-bold text-xl mb-1 truncate w-full px-2" title={user.name}> {user.name}</h2>
             <p className="text-blue-300 text-sm font-medium mb-4">{user.specialization || "General Physician"}</p>
             <div className="flex space-x-3 text-xs bg-black/30 px-4 py-2 rounded-xl border border-white/10">
               <span className="text-gray-300">Exp: {user.experience}y</span>

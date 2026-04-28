@@ -159,12 +159,12 @@ export default function AdminDashboard() {
                 {stats.totalAppointments}
               </h2>
             </div>
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm transition-shadow hover:shadow-md">
+            {/* <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-3xl border border-emerald-100 dark:border-emerald-900/50 shadow-sm transition-shadow hover:shadow-md">
               <p className="text-emerald-700 dark:text-emerald-400 font-medium mb-1">Platform Revenue</p>
               <h2 className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400">
                 ₹{stats.platformRevenue || 0}
               </h2>
-            </div>
+            </div> */}
           </motion.div>
         )}
 
@@ -213,7 +213,7 @@ export default function AdminDashboard() {
                         className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors"
                       >
                         <td className="py-4 px-4 font-bold text-gray-900 dark:text-white">
-                          {u.role === "doctor" ? "Dr. " : ""}{u.name}
+                          {u.role === "doctor" ? " " : ""}{u.name}
                         </td>
                         <td className="py-4 px-4 text-gray-500 dark:text-gray-400">
                           {u.email}
@@ -270,7 +270,7 @@ export default function AdminDashboard() {
                       className="border-b border-slate-100 dark:border-slate-700/50 hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors"
                     >
                       <td className="py-4 px-4 font-bold text-gray-900 dark:text-white whitespace-nowrap">
-                        Dr. {appt.doctorId?.name || "Unknown"}
+                         {appt.doctorId?.name || "Unknown"}
                       </td>
                       <td className="py-4 px-4 font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
                         {appt.patientId?.name || "Unknown"}
@@ -296,7 +296,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-// ... (End of AdminDashboard)
+
       </main>
 
       {/* Settings Modal */}

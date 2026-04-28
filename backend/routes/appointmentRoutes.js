@@ -20,11 +20,13 @@ const {
   bookAppointment,
   getAppointments,
   cancelAppointment,
-  completeAppointment
+  completeAppointment,
+  getBookedSlots
 } = require("../controllers/appointmentController");
 
 router.post("/", protect, bookAppointment);
 router.get("/", protect, getAppointments);
+router.get("/doctor/:doctorId/booked-slots", protect, getBookedSlots);
 router.put("/:id/cancel", protect, cancelAppointment);
 router.put("/:id/complete", protect, completeAppointment);
 

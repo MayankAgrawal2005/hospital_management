@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import API from "../services/api";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import toast from "react-hot-toast";
 import { SkeletonCard } from "../components/SkeletonLoader";
@@ -8,10 +8,16 @@ import { motion, AnimatePresence } from "framer-motion";
 
 export default function BookAppointment() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const recommendedDoctorId = searchParams.get("doctorId");
 
   const [doctors, setDoctors] = useState([]);
   const [doctorId, setDoctorId] = useState("");
   const [date, setDate] = useState("");
+  const [time, setTime] = useState("");
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [appointmentType, setAppointmentType] = useState("In-Person");
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
 
@@ -19,10 +25,43 @@ export default function BookAppointment() {
     fetchDoctors();
   }, []);
 
+  useEffect(() => {
+    if (doctorId && date) {
+      fetchBookedSlots();
+    } else {
+      setBookedSlots([]);
+      setTime("");
+    }
+  }, [doctorId, date]);
+
+  const fetchBookedSlots = async () => {
+    try {
+      const res = await API.get(`/appointments/doctor/${doctorId}/booked-slots?date=${date}`);
+      setBookedSlots(res.data);
+    } catch {
+      toast.error("Failed to fetch available time slots");
+    }
+  };
+
   const fetchDoctors = async () => {
     try {
       const res = await API.get("/users?role=doctor");
-      setDoctors(res.data);
+      let fetchedDoctors = res.data;
+
+      if (recommendedDoctorId) {
+        fetchedDoctors.sort((a, b) => {
+          const aMatch = a._id === recommendedDoctorId;
+          const bMatch = b._id === recommendedDoctorId;
+          return (bMatch ? 1 : 0) - (aMatch ? 1 : 0);
+        });
+      }
+      
+      setDoctors(fetchedDoctors);
+
+      if (recommendedDoctorId && fetchedDoctors.length > 0) {
+        const match = fetchedDoctors.find(d => d._id === recommendedDoctorId);
+        if (match) setDoctorId(match._id);
+      }
     } catch {
       toast.error("Failed to load specialists. Please try again later.");
     } finally {
@@ -31,8 +70,8 @@ export default function BookAppointment() {
   };
 
   const handleBook = async () => {
-    if (!doctorId || !date) {
-      toast.error("Please select a doctor and date");
+    if (!doctorId || !date || !time) {
+      toast.error("Please select a doctor, date, and time");
       return;
     }
 
@@ -40,7 +79,9 @@ export default function BookAppointment() {
     try {
       await API.post("/appointments", {
         doctorId,
-        date
+        date,
+        time,
+        appointmentType
       });
       toast.success("Appointment booked successfully!");
       navigate("/dashboard");
@@ -64,7 +105,7 @@ export default function BookAppointment() {
       <Navbar />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 mt-24">
-        
+
         <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
             <Link to="/dashboard" className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 mb-2 inline-flex items-center gap-1">
@@ -74,57 +115,65 @@ export default function BookAppointment() {
               Book Appointment
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1">Select a specialist and choose your preferred date.</p>
+            {recommendedDoctorId && doctors.find(d => d._id === recommendedDoctorId) && (
+              <div className="mt-3 inline-block bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-4 py-2 rounded-xl text-sm font-bold shadow-sm">
+                ✨ AI Recommended: Dr. {doctors.find(d => d._id === recommendedDoctorId).name}
+              </div>
+            )}
           </motion.div>
         </header>
 
         <div className="grid lg:grid-cols-3 gap-8 items-start">
-          
+
           {/* Main List */}
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 px-2">1. Select a Doctor</h2>
-            
+
             {fetchLoading ? (
               <div className="grid sm:grid-cols-2 gap-4">
-                 <SkeletonCard />
-                 <SkeletonCard />
-                 <SkeletonCard />
-                 <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
               </div>
             ) : doctors.length === 0 ? (
               <div className="bg-white dark:bg-slate-800 p-8 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm text-center">
-                 <p className="text-gray-500 dark:text-gray-400 font-medium">No doctors available at the moment.</p>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No doctors available at the moment.</p>
               </div>
             ) : (
-              <motion.div 
+              <motion.div
                 variants={containerVariants} initial="hidden" animate="show"
                 className="grid sm:grid-cols-2 gap-4"
               >
                 {doctors.map(d => (
-                  <motion.label 
+                  <motion.label
                     variants={itemVariants}
-                    key={d._id} 
-                    className={`block cursor-pointer bg-white dark:bg-slate-800 p-6 rounded-3xl border-2 transition-all duration-200 ${
-                      doctorId === d._id 
-                      ? "border-blue-500 ring-4 ring-blue-50 dark:ring-blue-900/30 bg-blue-50/10 dark:bg-blue-900/10 shadow-md transform scale-[1.02]" 
-                      : "border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 shadow-sm hover:shadow-md"
-                    }`}
+                    key={d._id}
+                    className={`block cursor-pointer bg-white dark:bg-slate-800 p-6 rounded-3xl border-2 transition-all duration-200 ${doctorId === d._id
+                        ? "border-blue-500 ring-4 ring-blue-50 dark:ring-blue-900/30 bg-blue-50/10 dark:bg-blue-900/10 shadow-md transform scale-[1.02]"
+                        : "border-slate-100 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-500 shadow-sm hover:shadow-md"
+                      }`}
                   >
-                    <input 
-                      type="radio" 
-                      name="doctor" 
-                      className="sr-only" 
-                      value={d._id} 
-                      onChange={(e) => setDoctorId(e.target.value)} 
+                    <input
+                      type="radio"
+                      name="doctor"
+                      className="sr-only"
+                      value={d._id}
+                      onChange={(e) => setDoctorId(e.target.value)}
                     />
                     <div className="flex gap-4">
-                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl shrink-0 transition-colors ${
-                        doctorId === d._id ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30" : "bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400"
-                      }`}>
+                      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl shrink-0 transition-colors ${doctorId === d._id ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30" : "bg-blue-50 dark:bg-slate-700 text-blue-600 dark:text-blue-400"
+                        }`}>
                         {d.name.charAt(0)}
                       </div>
                       <div>
-                        <h3 className="font-bold text-gray-900 dark:text-white text-lg">Dr. {d.name}</h3>
-                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">{d.specialization || "General Physician"}</p>
+                        <h3 className="font-bold text-gray-900 dark:text-white text-lg"> {d.name}</h3>
+                        <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mb-1">
+                          {d.specialization || "General Physician"}
+                          {recommendedDoctorId && d._id === recommendedDoctorId && (
+                            <span className="ml-2 text-[10px] bg-indigo-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">✨ AI Recommended</span>
+                          )}
+                        </p>
                         <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                           <li>⭐ {d.experience || 0}+ years exp</li>
                           <li>💸 ₹{d.fees || 0} Consultation</li>
@@ -140,9 +189,9 @@ export default function BookAppointment() {
           {/* Sticky Sidebar */}
           <div className="lg:col-span-1 lg:sticky lg:top-28">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4 px-2">2. Schedule & Confirm</h2>
-            
+
             <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-xl shadow-blue-900/5 dark:shadow-none p-6">
-              
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Select Date</label>
                 <input
@@ -153,10 +202,63 @@ export default function BookAppointment() {
                 />
               </div>
 
+              <AnimatePresence>
+                {date && doctorId && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-6"
+                  >
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Available Time Slots</label>
+                    <div className="flex flex-wrap gap-2">
+                      {doctors.find(d => d._id === doctorId)?.availableSlots?.length > 0 ? (
+                        doctors.find(d => d._id === doctorId).availableSlots.map(slot => {
+                          const isBooked = bookedSlots.includes(slot);
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              disabled={isBooked}
+                              onClick={() => setTime(slot)}
+                              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                                isBooked ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500 line-through"
+                                : time === slot ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30"
+                                : "bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:border-blue-500"
+                              }`}
+                            >
+                              {slot}
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <p className="text-sm text-gray-500 dark:text-gray-400 italic">This doctor has no available time slots.</p>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Consultation Type</label>
+                <div className="flex gap-4">
+                  <label className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 cursor-pointer transition-all ${appointmentType === "In-Person" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-bold" : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-600"
+                    }`}>
+                    <input type="radio" name="appointmentType" value="In-Person" className="sr-only" checked={appointmentType === "In-Person"} onChange={(e) => setAppointmentType(e.target.value)} />
+                    🏥 Clinic
+                  </label>
+                  <label className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl border-2 cursor-pointer transition-all ${appointmentType === "Online" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 font-bold" : "border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-gray-600 dark:text-gray-400 font-medium hover:bg-slate-100 dark:hover:bg-slate-600"
+                    }`}>
+                    <input type="radio" name="appointmentType" value="Online" className="sr-only" checked={appointmentType === "Online"} onChange={(e) => setAppointmentType(e.target.value)} />
+                    📹 Video
+                  </label>
+                </div>
+              </div>
+
               {/* Summary */}
               <AnimatePresence>
                 {doctorId && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
@@ -165,10 +267,18 @@ export default function BookAppointment() {
                     <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">Summary</h4>
                     <p className="font-semibold text-gray-900 dark:text-white">Dr. {doctors.find(d => d._id === doctorId)?.name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">₹{doctors.find(d => d._id === doctorId)?.fees} • {doctors.find(d => d._id === doctorId)?.specialization || "General Physician"}</p>
+                    <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800/50 flex items-center justify-between text-sm font-medium">
+                      <span className="text-gray-600 dark:text-gray-400">Type</span>
+                      <span className="text-gray-900 dark:text-white flex items-center gap-1">
+                        {appointmentType === "Online" ? "📹 Video Call" : "🏥 In-Person"}
+                      </span>
+                    </div>
                     {date && (
                       <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800/50 flex items-center justify-between text-sm font-medium">
                         <span className="text-gray-600 dark:text-gray-400">Date</span>
-                        <span className="text-gray-900 dark:text-white">{new Date(date).toLocaleDateString()}</span>
+                        <span className="text-gray-900 dark:text-white">
+                          {new Date(date).toLocaleDateString()} {time && `at ${time}`}
+                        </span>
                       </div>
                     )}
                   </motion.div>
@@ -177,7 +287,7 @@ export default function BookAppointment() {
 
               <button
                 onClick={handleBook}
-                disabled={loading || !doctorId || !date}
+                disabled={loading || !doctorId || !date || !time}
                 className="w-full py-4 text-center rounded-2xl font-bold border-2 transition-all shadow-lg 
                 enabled:bg-gradient-to-r enabled:from-blue-600 enabled:to-indigo-600 enabled:text-white enabled:border-transparent enabled:hover:shadow-xl enabled:hover:-translate-y-0.5 enabled:shadow-blue-500/30
                 disabled:bg-slate-50 dark:disabled:bg-slate-700 disabled:border-slate-200 dark:disabled:border-slate-600 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:cursor-not-allowed"
