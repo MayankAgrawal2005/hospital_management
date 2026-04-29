@@ -31,10 +31,9 @@ function App() {
           position="top-center"
           reverseOrder={false}
           toastOptions={{
-            className: '!bg-white !text-slate-900 dark:!bg-slate-800 dark:!text-white border dark:border-slate-700 shadow-xl',
+            className: '!bg-white !text-slate-900 dark:!bg-slate-800 dark:!text-white border dark:border-slate-700 shadow-xl font-medium',
             duration: 3000,
-            success: { duration: 2000 },
-            error: { duration: 2000 }
+            pauseOnHover: false,
           }}
         />
         <Routes>

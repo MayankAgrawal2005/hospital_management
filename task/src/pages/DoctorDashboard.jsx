@@ -6,6 +6,10 @@ import { format, startOfWeek, endOfWeek, getDay, startOfMonth, endOfMonth, eachD
 import { SkeletonStats } from "../components/SkeletonLoader";
 import { motion, AnimatePresence } from "framer-motion";
 import PasswordManager from "../components/PasswordManager";
+import PrescriptionForm from "../components/PrescriptionForm";
+import ReportUploadModal from "../components/ReportUploadModal";
+import ReportPreviewModal from "../components/ReportPreviewModal";
+import { generatePrescriptionPDF } from "../utils/pdfGenerator";
 
 const STANDARD_SLOTS = [
   "09:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
@@ -42,6 +46,14 @@ export default function DoctorDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingSecurity, setIsEditingSecurity] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeView, setActiveView] = useState("overview"); // overview, prescriptions, reports
+  const [prescriptionApptId, setPrescriptionApptId] = useState(null);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [previewReport, setPreviewReport] = useState(null);
+  const [editingReport, setEditingReport] = useState(null);
+  const [reportFilter, setReportFilter] = useState({ search: "", type: "All" });
   const [savingProfile, setSavingProfile] = useState(false);
   const [customSlot, setCustomSlot] = useState("");
   const [editForm, setEditForm] = useState({
@@ -57,7 +69,53 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     fetchAppointments();
+    fetchPrescriptions();
+    fetchReports();
   }, []);
+
+  const fetchReports = async () => {
+    try {
+      const res = await API.get("/reports/my");
+      setReports(res.data);
+    } catch {
+      console.error("Failed to fetch reports");
+    }
+  };
+
+  const handleDeleteReport = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this report?")) return;
+    try {
+      await API.delete(`/reports/${id}`);
+      toast.success("Report deleted");
+      fetchReports();
+    } catch {
+      toast.error("Failed to delete report");
+    }
+  };
+
+  const handleUpdateReport = async (e) => {
+    e.preventDefault();
+    try {
+      await API.put(`/reports/${editingReport._id}`, {
+        reportName: editingReport.reportName,
+        reportType: editingReport.reportType
+      });
+      toast.success("Report updated");
+      setEditingReport(null);
+      fetchReports();
+    } catch {
+      toast.error("Failed to update report");
+    }
+  };
+
+  const fetchPrescriptions = async () => {
+    try {
+      const res = await API.get("/prescriptions/my");
+      setPrescriptions(res.data);
+    } catch {
+      console.error("Failed to fetch prescriptions");
+    }
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -75,6 +133,7 @@ export default function DoctorDashboard() {
       await API.put(`/appointments/${id}/complete`);
       toast.success("Appointment marked as completed");
       fetchAppointments();
+      setPrescriptionApptId(id); // Open prescription form automatically
     } catch {
       toast.error("Failed to complete appointment");
     }
@@ -211,7 +270,7 @@ export default function DoctorDashboard() {
   };
 
   const total = appointments.length;
-  const booked = appointments.filter((a) => a.status === "booked").length;
+  const booked = appointments.filter((a) => ["booked", "rescheduled", "reschedule_requested"].includes(a.status)).length;
   const completed = appointments.filter((a) => a.status === "completed").length;
   const cancelled = appointments.filter((a) => a.status === "cancelled").length;
 
@@ -418,8 +477,8 @@ export default function DoctorDashboard() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white dark:bg-gray-900 border-b border-slate-200 dark:border-gray-800 px-4 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2 font-bold text-lg text-gray-900 dark:text-white">
-          <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm">C</div>
-          CarePoint
+          <div className="w-7 h-7 bg-blue-500 rounded-lg flex items-center justify-center text-white text-sm">S</div>
+          CareSync 360
         </div>
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -430,13 +489,13 @@ export default function DoctorDashboard() {
       {sidebarOpen && <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`w-72 bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col fixed h-full z-50 shadow-2xl border-r border-slate-200 dark:border-gray-800 transition-transform duration-300 overflow-y-auto
+      <aside className={`w-72 bg-white dark:bg-gray-900 text-gray-900 dark:text-white flex flex-col fixed top-0 left-0 h-full z-50 shadow-2xl border-r border-slate-200 dark:border-gray-800 transition-transform duration-300 overflow-y-auto
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-2 font-bold text-xl text-gray-900 dark:text-white">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30 text-white text-base">C</div>
-              CarePoint
+              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30 text-white text-base">S</div>
+              CareSync 360
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -474,9 +533,24 @@ export default function DoctorDashboard() {
         </div>
 
         <nav className="flex-1 px-4 space-y-2">
-          <p className="bg-blue-600/10 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 font-semibold px-4 py-3 rounded-xl border border-blue-200 dark:border-blue-500/20">
-            Overview Dashboard
-          </p>
+          <button
+            onClick={() => { setActiveView("overview"); setSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold ${activeView === "overview" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "text-gray-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          >
+            <span>📅</span> Dashboard
+          </button>
+          <button
+            onClick={() => { setActiveView("prescriptions"); setSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold ${activeView === "prescriptions" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "text-gray-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          >
+            <span>📝</span> Prescriptions
+          </button>
+          <button
+            onClick={() => { setActiveView("reports"); setSidebarOpen(false); }}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold ${activeView === "reports" ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30" : "text-gray-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+          >
+            <span>📂</span> Patient Reports
+          </button>
         </nav>
 
         <div className="p-6 space-y-3">
@@ -497,10 +571,12 @@ export default function DoctorDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-72 w-full overflow-x-hidden p-4 sm:p-8 lg:p-12 min-h-screen pt-20 lg:pt-8">
-        <header className="mb-10">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Practice Overview
-          </h1>
+        {activeView === "overview" ? (
+          <>
+            <header className="mb-10">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Practice Overview
+              </h1>
           <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">
             Manage your appointments and patients interactively.
           </p>
@@ -614,6 +690,149 @@ export default function DoctorDashboard() {
             </div>
           )}
         </div>
+      </>
+    ) : activeView === "prescriptions" ? (
+        <div className="space-y-8">
+          <header>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Prescription Records</h1>
+            <p className="text-gray-500 dark:text-gray-400">View and manage all prescriptions you've issued to patients.</p>
+          </header>
+
+          {prescriptions.length === 0 ? (
+            <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+              <div className="text-6xl mb-6">📝</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">No prescriptions issued yet</h3>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {prescriptions.map((pres) => (
+                <div key={pres._id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+                   <div className="flex justify-between items-start mb-4">
+                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${pres.status === 'final' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {pres.status}
+                      </span>
+                      <button onClick={() => setPrescriptionApptId(pres.appointmentId)} className="text-blue-600 dark:text-blue-400 text-xs font-bold hover:underline">Edit →</button>
+                   </div>
+                   <h4 className="font-bold text-gray-900 dark:text-white">{pres.patientId?.name}</h4>
+                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{new Date(pres.createdAt).toLocaleDateString()}</p>
+                   <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-6 italic">"{pres.notes}"</p>
+                   <button 
+                     onClick={() => generatePrescriptionPDF(pres)}
+                     className="w-full py-2.5 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all border border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2"
+                   >
+                     📄 View PDF
+                   </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Medical Reports</h1>
+              <p className="text-gray-500 dark:text-gray-400">Review and upload patient diagnostic reports.</p>
+            </div>
+            <button 
+              onClick={() => setShowUploadModal(true)}
+              className="px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+            >
+              <span>➕</span> Upload For Patient
+            </button>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
+            <input 
+              placeholder="Search patients or report names..."
+              className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none"
+              value={reportFilter.search}
+              onChange={(e) => setReportFilter({...reportFilter, search: e.target.value})}
+            />
+            <select 
+              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
+              value={reportFilter.type}
+              onChange={(e) => setReportFilter({...reportFilter, type: e.target.value})}
+            >
+              {["All", "Blood Test", "Sonography", "X-Ray", "MRI", "CT Scan", "Vaccination", "Other"].map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {reports.length === 0 ? (
+            <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+              <div className="text-6xl mb-6">📂</div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">No patient reports found</h3>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {reports
+                .filter(r => (reportFilter.type === "All" || r.reportType === reportFilter.type) && (r.reportName.toLowerCase().includes(reportFilter.search.toLowerCase()) || r.patientId?.name.toLowerCase().includes(reportFilter.search.toLowerCase())))
+                .map((report) => (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  key={report._id}
+                  className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xl flex items-center justify-center">
+                      {report.fileUrl.toLowerCase().endsWith(".pdf") ? "📄" : "🖼️"}
+                    </div>
+                    <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                      {report.reportType}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 dark:text-white mb-0.5 truncate">{report.reportName}</h4>
+                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-4 truncate">{report.patientId?.name}</p>
+                  
+                  <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 mb-6">
+                    <span>Uploaded: {new Date(report.date).toLocaleDateString()}</span>
+                    <span className="font-bold text-slate-700 dark:text-slate-300 capitalize">Source: {report.uploadedBy}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <button 
+                      onClick={() => setPreviewReport(report)}
+                      className="py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-bold text-[10px] transition-all"
+                    >
+                      Preview
+                    </button>
+                    <a 
+                      href={report.fileUrl}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 rounded-lg font-bold text-[10px] text-center transition-all"
+                    >
+                      Download
+                    </a>
+                  </div>
+
+                  {report.uploadedBy === "doctor" && report.doctorId?._id === user._id && (
+                    <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                      <button 
+                        onClick={() => setEditingReport(report)}
+                        className="flex-1 py-1.5 text-[9px] font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1"
+                      >
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteReport(report._id)}
+                        className="flex-1 py-1.5 text-[9px] font-bold text-slate-500 hover:text-red-600 transition-colors flex items-center justify-center gap-1"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       </main>
 
       <AnimatePresence>
@@ -720,6 +939,17 @@ export default function DoctorDashboard() {
                              </button>
                            </div>
                          )}
+
+                         {a.status === "completed" && (
+                           <div className="flex justify-end mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                             <button
+                               onClick={() => setPrescriptionApptId(a._id)}
+                               className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center gap-2"
+                             >
+                               <span>📝</span> Write / View Prescription
+                             </button>
+                           </div>
+                         )}
                       </div>
                     ))}
                   </div>
@@ -788,6 +1018,77 @@ export default function DoctorDashboard() {
                 <button onClick={() => setRescheduleModalData(null)} className="px-4 py-2 text-gray-600 dark:text-gray-300 font-bold hover:bg-slate-100 dark:hover:bg-slate-700 rounded-xl">Back</button>
                 <button onClick={submitReschedule} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl shadow-md">Confirm Reschedule</button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Prescription Modal */}
+      <AnimatePresence>
+        {prescriptionApptId && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl p-8 shadow-2xl border border-slate-100 dark:border-slate-700"
+            >
+              <PrescriptionForm 
+                appointmentId={prescriptionApptId} 
+                onClose={() => setPrescriptionApptId(null)} 
+                onSave={() => { fetchAppointments(); fetchPrescriptions(); }}
+              />
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showUploadModal && (
+          <ReportUploadModal 
+            onClose={() => setShowUploadModal(false)} 
+            onUpload={fetchReports}
+          />
+        )}
+        {previewReport && (
+          <ReportPreviewModal 
+            report={previewReport} 
+            onClose={() => setPreviewReport(null)} 
+          />
+        )}
+        {editingReport && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl p-8 shadow-2xl"
+            >
+              <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Edit Report Details</h2>
+              <form onSubmit={handleUpdateReport} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Report Name</label>
+                  <input 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none"
+                    value={editingReport.reportName}
+                    onChange={(e) => setEditingReport({...editingReport, reportName: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Report Type</label>
+                  <select 
+                    className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
+                    value={editingReport.reportType}
+                    onChange={(e) => setEditingReport({...editingReport, reportType: e.target.value})}
+                  >
+                    {["Blood Test", "Sonography", "X-Ray", "MRI", "CT Scan", "Vaccination", "Other"].map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setEditingReport(null)} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+                  <button type="submit" className="flex-1 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">Save Changes</button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

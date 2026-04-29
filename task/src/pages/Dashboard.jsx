@@ -7,6 +7,9 @@ import { SkeletonStats, SkeletonRow } from "../components/SkeletonLoader";
 import { motion, AnimatePresence } from "framer-motion";
 import PasswordManager from "../components/PasswordManager";
 import AISymptomChecker from "../components/AISymptomChecker";
+import { generatePrescriptionPDF } from "../utils/pdfGenerator";
+import ReportUploadModal from "../components/ReportUploadModal";
+import ReportPreviewModal from "../components/ReportPreviewModal";
 
 export default function Dashboard() {
   const userStr = localStorage.getItem("user");
@@ -20,6 +23,13 @@ export default function Dashboard() {
   const [profileForm, setProfileForm] = useState({
     name: "", phone: "", dateOfBirth: "", bloodGroup: "", gender: ""
   });
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [activeTab, setActiveTab] = useState("appointments"); // appointments, prescriptions, reports
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [previewReport, setPreviewReport] = useState(null);
+  const [editingReport, setEditingReport] = useState(null);
+  const [reportFilter, setReportFilter] = useState({ search: "", type: "All" });
 
   // Advanced Scheduling State
   const [cancelModalData, setCancelModalData] = useState(null);
@@ -31,7 +41,53 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchAppointments();
+    fetchPrescriptions();
+    fetchReports();
   }, []);
+
+  const fetchReports = async () => {
+    try {
+      const res = await API.get("/reports/my");
+      setReports(res.data);
+    } catch {
+      console.error("Failed to fetch reports");
+    }
+  };
+
+  const handleDeleteReport = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this report? This will also remove it from Cloudinary.")) return;
+    try {
+      await API.delete(`/reports/${id}`);
+      toast.success("Report deleted");
+      fetchReports();
+    } catch {
+      toast.error("Failed to delete report");
+    }
+  };
+
+  const handleUpdateReport = async (e) => {
+    e.preventDefault();
+    try {
+      await API.put(`/reports/${editingReport._id}`, {
+        reportName: editingReport.reportName,
+        reportType: editingReport.reportType
+      });
+      toast.success("Report updated");
+      setEditingReport(null);
+      fetchReports();
+    } catch {
+      toast.error("Failed to update report");
+    }
+  };
+
+  const fetchPrescriptions = async () => {
+    try {
+      const res = await API.get("/prescriptions/my");
+      setPrescriptions(res.data);
+    } catch (err) {
+      console.error("Failed to fetch prescriptions");
+    }
+  };
 
   const fetchAppointments = async () => {
     try {
@@ -100,7 +156,7 @@ export default function Dashboard() {
   };
 
   const total = appointments.length;
-  const booked = appointments.filter(a => a.status === "booked").length;
+  const booked = appointments.filter(a => ["booked", "rescheduled", "reschedule_requested"].includes(a.status)).length;
   const completed = appointments.filter(a => a.status === "completed").length;
   const cancelled = appointments.filter(a => a.status === "cancelled").length;
 
@@ -206,9 +262,34 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Appointments List */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Your Appointments</h2>
+        {/* Tabs */}
+        <div className="flex gap-6 mb-10 border-b border-slate-200 dark:border-slate-800">
+          <button 
+            onClick={() => setActiveTab("appointments")}
+            className={`pb-4 px-2 font-bold text-lg transition-all relative ${activeTab === "appointments" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+          >
+            My Appointments
+            {activeTab === "appointments" && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
+          </button>
+          <button 
+            onClick={() => setActiveTab("prescriptions")}
+            className={`pb-4 px-2 font-bold text-lg transition-all relative ${activeTab === "prescriptions" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+          >
+            Prescriptions
+            {activeTab === "prescriptions" && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
+          </button>
+          <button 
+            onClick={() => setActiveTab("reports")}
+            className={`pb-4 px-2 font-bold text-lg transition-all relative ${activeTab === "reports" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+          >
+            Medical Reports
+            {activeTab === "reports" && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
+          </button>
+        </div>
+
+        {activeTab === "appointments" ? (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Your Appointments</h2>
 
           {loading ? (
             <div className="space-y-4">
@@ -312,8 +393,220 @@ export default function Dashboard() {
               ))}
             </motion.div>
           )}
-        </div>
+          </div>
+        ) : activeTab === "prescriptions" ? (
+          <div className="space-y-6 mb-20">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">Prescriptions & Reports</h2>
+              <p className="text-gray-500 dark:text-gray-400 mt-1">Access your medical history and digital prescriptions.</p>
+            </div>
 
+            {loading ? (
+              <div className="space-y-4">
+                <SkeletonRow />
+                <SkeletonRow />
+              </div>
+            ) : prescriptions.length === 0 ? (
+              <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                <div className="text-6xl mb-6">📄</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">No prescriptions yet</h3>
+                <p className="text-gray-500 dark:text-gray-400">Your digital prescriptions will appear here after your appointments.</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-10">
+                {prescriptions.map((pres) => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key={pres._id}
+                    className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl">
+                        📝
+                      </div>
+                      <span className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Finalized
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 dark:text-white mb-1">Dr. {pres.doctorId?.name}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{new Date(pres.createdAt).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+                    
+                    <div className="space-y-2 mb-6 flex-1">
+                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 italic">"{pres.notes}"</p>
+                      <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tighter">
+                        {pres.medicines?.length} Medicines prescribed
+                      </p>
+                    </div>
+
+                    <button 
+                      onClick={() => generatePrescriptionPDF(pres)}
+                      className="w-full py-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 rounded-2xl font-bold text-sm transition-all border border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2"
+                    >
+                      📥 Download PDF
+                    </button>
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-8 mb-20">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white">Medical Reports</h2>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">Manage and upload your test results.</p>
+              </div>
+              <button 
+                onClick={() => setShowUploadModal(true)}
+                className="px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+              >
+                <span>➕</span> Upload New Report
+              </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
+              <input 
+                placeholder="Search reports..."
+                className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none"
+                value={reportFilter.search}
+                onChange={(e) => setReportFilter({...reportFilter, search: e.target.value})}
+              />
+              <select 
+                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
+                value={reportFilter.type}
+                onChange={(e) => setReportFilter({...reportFilter, type: e.target.value})}
+              >
+                {["All", "Blood Test", "Sonography", "X-Ray", "MRI", "CT Scan", "Vaccination", "Other"].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {reports.filter(r => (reportFilter.type === "All" || r.reportType === reportFilter.type) && r.reportName.toLowerCase().includes(reportFilter.search.toLowerCase())).length === 0 ? (
+              <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                <div className="text-6xl mb-6">📂</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">No reports found</h3>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {reports
+                  .filter(r => (reportFilter.type === "All" || r.reportType === reportFilter.type) && r.reportName.toLowerCase().includes(reportFilter.search.toLowerCase()))
+                  .map((report) => (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    key={report._id}
+                    className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow group"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-slate-900/50 text-2xl flex items-center justify-center">
+                        {report.fileUrl.toLowerCase().endsWith(".pdf") ? "📄" : "🖼️"}
+                      </div>
+                      <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                        {report.reportType}
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 dark:text-white mb-1 truncate" title={report.reportName}>{report.reportName}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-6 flex justify-between items-center">
+                      <span>{new Date(report.date).toLocaleDateString()}</span>
+                      {report.uploadedBy === "doctor" && <span className="italic">By Dr. {report.doctorId?.name}</span>}
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <button 
+                        onClick={() => setPreviewReport(report)}
+                        className="py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs transition-all"
+                      >
+                        Preview
+                      </button>
+                      <a 
+                        href={report.fileUrl}
+                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-2.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 rounded-xl font-bold text-xs text-center transition-all"
+                      >
+                        Download
+                      </a>
+                    </div>
+
+                    {report.uploadedBy === "patient" && (
+                      <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                        <button 
+                          onClick={() => setEditingReport(report)}
+                          className="flex-1 py-2 text-[10px] font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>✏️</span> Edit
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteReport(report._id)}
+                          className="flex-1 py-2 text-[10px] font-bold text-slate-500 hover:text-red-600 transition-colors flex items-center justify-center gap-1"
+                        >
+                          <span>🗑️</span> Delete
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Modals */}
+        <AnimatePresence>
+          {showUploadModal && (
+            <ReportUploadModal 
+              onClose={() => setShowUploadModal(false)} 
+              onUpload={fetchReports}
+            />
+          )}
+          {previewReport && (
+            <ReportPreviewModal 
+              report={previewReport} 
+              onClose={() => setPreviewReport(null)} 
+            />
+          )}
+          {editingReport && (
+            <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl p-8 shadow-2xl"
+              >
+                <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Edit Report Details</h2>
+                <form onSubmit={handleUpdateReport} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Report Name</label>
+                    <input 
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none"
+                      value={editingReport.reportName}
+                      onChange={(e) => setEditingReport({...editingReport, reportName: e.target.value})}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Report Type</label>
+                    <select 
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
+                      value={editingReport.reportType}
+                      onChange={(e) => setEditingReport({...editingReport, reportType: e.target.value})}
+                    >
+                      {["Blood Test", "Sonography", "X-Ray", "MRI", "CT Scan", "Vaccination", "Other"].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <button type="button" onClick={() => setEditingReport(null)} className="flex-1 py-3 text-sm font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition-all">Cancel</button>
+                    <button type="submit" className="flex-1 py-3 bg-blue-600 text-white text-sm font-bold rounded-xl shadow-lg shadow-blue-500/20 transition-all">Save Changes</button>
+                  </div>
+                </form>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Profile Edit Modal */}

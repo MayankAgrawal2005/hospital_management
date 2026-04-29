@@ -109,7 +109,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6">
           <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="text-center mb-16">
             <h2 className="text-sm font-bold text-blue-600 dark:text-blue-400 tracking-widest uppercase mb-3">Our Benefits</h2>
-            <h3 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white">Why choose CarePoint?</h3>
+            <h3 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white">Why choose CareSync 360?</h3>
           </motion.div>
           
           <motion.div 
@@ -203,7 +203,7 @@ export default function Home() {
           >
             {[
               {
-                text: "CarePoint made it completely effortless to find a top pediatrician for my daughter. Highly recommended!",
+                text: "CareSync 360 made it completely effortless to find a top pediatrician for my daughter. Highly recommended!",
                 name: "Sarah Jenkins", role: "Patient"
               },
               {
@@ -239,15 +239,15 @@ export default function Home() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-slate-950 text-slate-300 py-16 border-t border-slate-900">
+      <footer className="bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-300 py-16 border-t border-slate-200 dark:border-slate-900 transition-colors">
         <div className="max-w-7xl mx-auto px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-6">
               <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-sm">C</span>
+                <span className="text-white font-bold text-sm">S</span>
               </div>
-              <h2 className="text-2xl font-extrabold text-white">CarePoint</h2>
+              <h2 className="text-2xl font-extrabold text-gray-900 dark:text-white">CareSync 360</h2>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
               Modernizing healthcare accessibility by bringing the clinic directly to your screen.
@@ -255,7 +255,7 @@ export default function Home() {
           </div>
 
           <div>
-            <h4 className="text-white font-bold mb-6 tracking-wider">Product</h4>
+            <h4 className="text-gray-900 dark:text-white font-bold mb-6 tracking-wider">Product</h4>
             <ul className="space-y-3 text-sm">
               <li><a href="#" className="hover:text-blue-400 transition-colors">Find a Doctor</a></li>
               <li><a href="#" className="hover:text-blue-400 transition-colors">Book Consultation</a></li>
@@ -265,7 +265,7 @@ export default function Home() {
           </div>
 
           <div>
-            <h4 className="text-white font-bold mb-6 tracking-wider">Company</h4>
+            <h4 className="text-gray-900 dark:text-white font-bold mb-6 tracking-wider">Company</h4>
             <ul className="space-y-3 text-sm">
               <li><a href="#" className="hover:text-blue-400 transition-colors">About Us</a></li>
               <li><a href="#" className="hover:text-blue-400 transition-colors">Careers</a></li>
@@ -275,7 +275,7 @@ export default function Home() {
           </div>
 
           <div>
-            <h4 className="text-white font-bold mb-6 tracking-wider">Subscribe</h4>
+            <h4 className="text-gray-900 dark:text-white font-bold mb-6 tracking-wider">Subscribe</h4>
             <p className="text-xs text-slate-400 mb-4">Get the latest healthcare updates directly in your inbox.</p>
             <div className="flex bg-slate-900 rounded-xl overflow-hidden focus-within:ring-2 ring-blue-500 border border-slate-800">
               <input 
@@ -292,7 +292,7 @@ export default function Home() {
 
         <div className="max-w-7xl mx-auto px-6 pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-xs text-slate-500">
-            &copy; {new Date().getFullYear()} CarePoint Medical Technologies. All rights reserved.
+            &copy; {new Date().getFullYear()} CareSync 360 Medical Technologies. All rights reserved.
           </p>
           <div className="flex gap-4 text-slate-500">
              <span className="cursor-pointer hover:text-white transition-colors">X</span>

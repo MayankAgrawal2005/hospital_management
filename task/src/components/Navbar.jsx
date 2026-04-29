@@ -39,10 +39,10 @@ export default function Navbar() {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-            <span className="text-white font-bold text-lg sm:text-xl">C</span>
+            <span className="text-white font-bold text-lg sm:text-xl">S</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300">
-            CarePoint
+            CareSync 360
           </h1>
         </Link>
 

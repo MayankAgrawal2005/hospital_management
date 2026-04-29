@@ -72,8 +72,8 @@ export default function AdminDashboard() {
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-30 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-2 font-bold text-lg text-gray-900 dark:text-white">
-          <div className="w-7 h-7 bg-red-600 rounded-lg flex items-center justify-center text-white text-sm">A</div>
-          Super Admin
+          <div className="w-7 h-7 bg-red-600 rounded-lg flex items-center justify-center text-white text-sm">S</div>
+          CareSync 360 Admin
         </div>
         <button onClick={() => setSidebarOpen(true)} className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">
           <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -84,13 +84,13 @@ export default function AdminDashboard() {
       {sidebarOpen && <div className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />}
 
       {/* Sidebar */}
-      <aside className={`w-72 bg-white dark:bg-slate-950 text-gray-900 dark:text-white flex flex-col fixed h-full z-50 shadow-2xl border-r border-slate-200 dark:border-slate-800 overflow-y-auto transition-transform duration-300
+      <aside className={`w-72 bg-white dark:bg-slate-950 text-gray-900 dark:text-white flex flex-col fixed top-0 left-0 h-full z-50 shadow-2xl border-r border-slate-200 dark:border-slate-800 overflow-y-auto transition-transform duration-300
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-10">
             <div className="flex items-center gap-2 font-bold text-xl text-gray-900 dark:text-white">
-              <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-600/30 text-white text-base">A</div>
-              Super Admin
+              <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-600/30 text-white text-base">S</div>
+              CareSync 360 Admin
             </div>
             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
