@@ -114,6 +114,17 @@ export default function Dashboard() {
     }
   };
 
+  const deleteAppointment = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this appointment record?")) return;
+    try {
+      await API.delete(`/appointments/${id}`);
+      toast.success("Appointment deleted");
+      fetchAppointments();
+    } catch {
+      toast.error("Failed to delete appointment");
+    }
+  };
+
   const submitReschedule = async () => {
     if (!newDate || !newTime) return toast.error("Please select a new date and time");
     try {
@@ -333,7 +344,15 @@ export default function Dashboard() {
                       <div className="font-semibold text-blue-700 dark:text-blue-300 flex flex-wrap items-center gap-1.5 text-xs sm:text-sm bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-lg">
                         📅 {new Date(a.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                         {a.time && ` at ${a.time}`}
-                        {a.appointmentType === "Online" && <span className="ml-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-2 py-0.5 rounded-md text-xs border border-indigo-200 dark:border-indigo-800">📹 Online</span>}
+                        {a.appointmentType === "Online" ? (
+                          <span className="ml-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-3 py-1 rounded-lg text-xs border border-indigo-200 dark:border-indigo-800 font-bold">📹 Online</span>
+                        ) : (
+                          a.doctorId?.clinicAddress && (
+                            <span className="ml-1 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 px-3 py-1 rounded-lg text-xs border border-emerald-200 dark:border-emerald-800/50 font-bold flex items-center gap-1">
+                              📍 {a.doctorId.clinicAddress}
+                            </span>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
@@ -385,6 +404,17 @@ export default function Dashboard() {
                           className="text-red-600 dark:text-red-400 font-bold text-sm hover:text-white hover:bg-red-600 px-4 py-2 rounded-xl transition-all duration-300 border border-red-200 dark:border-red-800/50"
                         >
                           Cancel
+                        </button>
+                      </div>
+                    )}
+
+                    {(a.status === "completed" || a.status === "cancelled") && (
+                      <div className="flex justify-end mt-2">
+                        <button
+                          onClick={() => deleteAppointment(a._id)}
+                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-bold text-xs flex items-center gap-1 transition-colors"
+                        >
+                          <span>🗑️</span> Delete Record
                         </button>
                       </div>
                     )}

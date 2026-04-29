@@ -306,6 +306,11 @@ export default function BookAppointment() {
                             {d.availableSlots?.length || 0} slots
                           </span>
                         </div>
+                        {d.clinicAddress && (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium flex items-center gap-1">
+                            📍 {d.clinicAddress}
+                          </p>
+                        )}
                         {d.bio && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2 line-clamp-2 italic">{d.bio}</p>
                         )}
@@ -406,6 +411,9 @@ export default function BookAppointment() {
                     <h4 className="text-xs font-bold text-blue-400 uppercase tracking-wider mb-2">Summary</h4>
                     <p className="font-semibold text-gray-900 dark:text-white">Dr. {doctors.find(d => d._id === doctorId)?.name}</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">₹{doctors.find(d => d._id === doctorId)?.fees} • {doctors.find(d => d._id === doctorId)?.specialization || "General Physician"}</p>
+                    {doctors.find(d => d._id === doctorId)?.clinicAddress && (
+                      <p className="text-[10px] text-indigo-500 dark:text-indigo-400 mt-1 font-bold">📍 {doctors.find(d => d._id === doctorId).clinicAddress}</p>
+                    )}
                     <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800/50 flex items-center justify-between text-sm font-medium">
                       <span className="text-gray-600 dark:text-gray-400">Type</span>
                       <span className="text-gray-900 dark:text-white flex items-center gap-1">

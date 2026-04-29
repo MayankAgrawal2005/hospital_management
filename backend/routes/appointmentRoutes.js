@@ -23,7 +23,8 @@ const {
   completeAppointment,
   getBookedSlots,
   rescheduleAppointment,
-  requestReschedule
+  requestReschedule,
+  deleteAppointment
 } = require("../controllers/appointmentController");
 
 router.post("/", protect, bookAppointment);
@@ -33,5 +34,6 @@ router.put("/:id/cancel", protect, cancelAppointment);
 router.put("/:id/complete", protect, completeAppointment);
 router.put("/:id/reschedule", protect, rescheduleAppointment);
 router.put("/:id/request-reschedule", protect, requestReschedule);
+router.delete("/:id", protect, deleteAppointment);
 
 module.exports = router;

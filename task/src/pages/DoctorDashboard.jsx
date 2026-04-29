@@ -63,7 +63,8 @@ export default function DoctorDashboard() {
     fees: "",
     bio: "",
     availableSlots: [],
-    leaveDays: []
+    leaveDays: [],
+    clinicAddress: ""
   });
   const [newLeaveDate, setNewLeaveDate] = useState("");
 
@@ -152,6 +153,17 @@ export default function DoctorDashboard() {
     }
   };
 
+  const deleteAppointment = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this appointment record?")) return;
+    try {
+      await API.delete(`/appointments/${id}`);
+      toast.success("Appointment deleted");
+      fetchAppointments();
+    } catch {
+      toast.error("Failed to delete appointment");
+    }
+  };
+
   const openRescheduleModal = (appt) => {
     setRescheduleModalData(appt._id);
     if (appt.status === 'reschedule_requested' && appt.requestedDate) {
@@ -192,7 +204,8 @@ export default function DoctorDashboard() {
       fees: user.fees || "",
       bio: user.bio || "",
       availableSlots: user.availableSlots || ["09:00 AM", "10:00 AM", "11:00 AM", "02:00 PM", "03:00 PM", "04:00 PM"],
-      leaveDays: user.leaveDays || []
+      leaveDays: user.leaveDays || [],
+      clinicAddress: user.clinicAddress || ""
     });
     setNewLeaveDate("");
     setIsEditing(true);
@@ -334,6 +347,15 @@ export default function DoctorDashboard() {
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Consultation Fees (₹)</label>
                   <input
                     name="fees" type="number" value={editForm.fees} onChange={handleEditChange}
+                    className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Clinic Address / Location</label>
+                  <input
+                    name="clinicAddress" value={editForm.clinicAddress} onChange={handleEditChange}
+                    placeholder="e.g. 123 Health Ave, Clinic Square"
                     className="w-full px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white transition-all"
                   />
                 </div>
@@ -520,7 +542,12 @@ export default function DoctorDashboard() {
               {user.name?.charAt(0)}
             </div>
             <h2 className="font-bold text-xl mb-1 truncate w-full px-2 text-gray-900 dark:text-white" title={user.name}> Dr. {user.name}</h2>
-            <p className="text-blue-600 dark:text-blue-300 text-sm font-medium mb-4">{user.specialization || "General Physician"}</p>
+            <p className="text-blue-600 dark:text-blue-300 text-sm font-medium mb-2">{user.specialization || "General Physician"}</p>
+            {user.clinicAddress && (
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mb-4 flex items-center gap-1">
+                📍 {user.clinicAddress}
+              </p>
+            )}
             <div className="flex space-x-3 text-xs bg-slate-200 dark:bg-black/30 px-4 py-2 rounded-xl border border-slate-300 dark:border-white/10">
               <span className="text-gray-600 dark:text-gray-300">Exp: {user.experience}y</span>
               <span className="text-gray-400 dark:text-gray-500">•</span>
@@ -941,12 +968,29 @@ export default function DoctorDashboard() {
                          )}
 
                          {a.status === "completed" && (
-                           <div className="flex justify-end mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                           <div className="flex justify-end items-center gap-4 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                             <button
+                               onClick={() => deleteAppointment(a._id)}
+                               className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-bold text-xs flex items-center gap-1 transition-colors"
+                             >
+                               <span>🗑️</span> Delete Record
+                             </button>
                              <button
                                onClick={() => setPrescriptionApptId(a._id)}
                                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-sm shadow-md transition-all flex items-center gap-2"
                              >
                                <span>📝</span> Write / View Prescription
+                             </button>
+                           </div>
+                         )}
+
+                         {a.status === "cancelled" && (
+                           <div className="flex justify-end mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                             <button
+                               onClick={() => deleteAppointment(a._id)}
+                               className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-bold text-xs flex items-center gap-1 transition-colors"
+                             >
+                               <span>🗑️</span> Delete Record
                              </button>
                            </div>
                          )}

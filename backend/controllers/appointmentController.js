@@ -100,13 +100,13 @@ exports.getAppointments = async (req, res) => {
     }
     else if (role === "patient") {
       appointments = await Appointment.find({ patientId: userId })
-        .populate("doctorId", "name email");
+        .populate("doctorId", "name email clinicAddress");
     }
     else {
       // Admin case if implemented in future
       appointments = await Appointment.find()
         .populate("patientId", "name email")
-        .populate("doctorId", "name email");
+        .populate("doctorId", "name email clinicAddress");
     }
 
     res.json(appointments);
@@ -324,6 +324,28 @@ exports.getBookedSlots = async (req, res) => {
     const bookedSlots = appointments.map(a => a.time).filter(Boolean);
     res.json(bookedSlots);
 
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const appointment = await Appointment.findById(id);
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    // Security: Only the patient or the doctor involved can delete
+    if (appointment.patientId.toString() !== userId && appointment.doctorId.toString() !== userId) {
+      return res.status(403).json({ message: "You are not authorized to delete this appointment" });
+    }
+
+    await Appointment.findByIdAndDelete(id);
+    res.json({ message: "Appointment deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
