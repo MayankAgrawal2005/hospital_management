@@ -5,11 +5,6 @@ const mongoose = require("mongoose");
 
 exports.register = async (req, res) => {
   try {
-    // Check if database is disconnected
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({ message: "Database connection is offline. Please check your MongoDB Atlas network/IP whitelist." });
-    }
-
     const {
       name,
       email,
@@ -57,11 +52,6 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    // Check if database is disconnected
-    if (mongoose.connection.readyState !== 1) {
-      return res.status(503).json({ message: "Database connection is offline. Please check your MongoDB Atlas network/IP whitelist." });
-    }
-
     const { email, password } = req.body;
 
     const user = await User.findOne({ email });

@@ -11,9 +11,27 @@ app.use(express.json());
 
 const uri = process.env.MONGO;
 
-mongoose.connect(uri)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
+let cachedDb = null;
+
+const connectToDatabase = async () => {
+  if (cachedDb && mongoose.connection.readyState === 1) {
+    return cachedDb;
+  }
+  console.log("Connecting to MongoDB...");
+  cachedDb = await mongoose.connect(process.env.MONGO);
+  return cachedDb;
+};
+
+// Middleware to ensure DB connection
+app.use(async (req, res, next) => {
+  try {
+    await connectToDatabase();
+    next();
+  } catch (err) {
+    console.error("DB Connection Error:", err);
+    res.status(503).json({ message: "Database connection failed. Please check your MONGO variable in Vercel." });
+  }
+});
 
 
 app.get("/", (req, res) => {
