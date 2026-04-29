@@ -16,6 +16,10 @@ mongoose.connect(uri)
   .catch(err => console.log(err));
 
 
+app.get("/", (req, res) => {
+  res.send("🚀 CareSync 360 API is running successfully!");
+});
+
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/users", require("./routes/userRoutes"));
 app.use("/api/appointments", require("./routes/appointmentRoutes"));
