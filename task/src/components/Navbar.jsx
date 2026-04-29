@@ -37,11 +37,11 @@ export default function Navbar() {
     <nav className={`fixed w-full top-0 z-50 transition-all duration-300 ${scrolled || mobileOpen ? 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-lg shadow-sm border-b border-gray-100 dark:border-slate-800' : 'bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex justify-between items-center">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-            <span className="text-white font-bold text-lg sm:text-xl">S</span>
+        <Link to="/" className="flex items-center gap-1.5 sm:gap-2 group">
+          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <span className="text-white font-bold text-base sm:text-xl">S</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300">
+          <h1 className="text-lg sm:text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 truncate max-w-[150px] sm:max-w-none">
             CareSync 360
           </h1>
         </Link>

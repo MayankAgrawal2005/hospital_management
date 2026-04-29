@@ -188,19 +188,19 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col font-sans transition-colors duration-300">
       <Navbar />
 
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-10 pt-28 sm:pt-32">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-8 pt-24 sm:pt-32 overflow-x-hidden">
 
         {/* Welcome Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4"
+          className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4"
         >
-          <div>
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+          <div className="max-w-full">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight break-words">
               Welcome back, {user.name} 👋
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">Here is your latest medical schedule.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-lg">Here is your latest medical schedule.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <button
@@ -273,25 +273,25 @@ export default function Dashboard() {
           </motion.div>
         )}
 
-        {/* Tabs */}
-        <div className="flex gap-6 mb-10 border-b border-slate-200 dark:border-slate-800">
+        {/* Tabs - Scrollable on mobile */}
+        <div className="flex gap-4 sm:gap-8 mb-8 border-b border-slate-200 dark:border-slate-800 overflow-x-auto no-scrollbar whitespace-nowrap scroll-smooth">
           <button 
             onClick={() => setActiveTab("appointments")}
-            className={`pb-4 px-2 font-bold text-lg transition-all relative ${activeTab === "appointments" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            className={`pb-4 px-1 font-bold text-base sm:text-lg transition-all relative shrink-0 ${activeTab === "appointments" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
           >
             My Appointments
             {activeTab === "appointments" && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
           </button>
           <button 
             onClick={() => setActiveTab("prescriptions")}
-            className={`pb-4 px-2 font-bold text-lg transition-all relative ${activeTab === "prescriptions" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            className={`pb-4 px-1 font-bold text-base sm:text-lg transition-all relative shrink-0 ${activeTab === "prescriptions" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
           >
             Prescriptions
             {activeTab === "prescriptions" && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
           </button>
           <button 
             onClick={() => setActiveTab("reports")}
-            className={`pb-4 px-2 font-bold text-lg transition-all relative ${activeTab === "reports" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+            className={`pb-4 px-1 font-bold text-base sm:text-lg transition-all relative shrink-0 ${activeTab === "reports" ? "text-blue-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
           >
             Medical Reports
             {activeTab === "reports" && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full" />}
@@ -357,8 +357,8 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col items-end gap-3 w-full md:w-auto mt-2 md:mt-0 pt-6 md:pt-0 border-t md:border-0 border-slate-100 dark:border-slate-700">
-                    <span className={`px-5 py-2 rounded-xl text-xs font-bold uppercase tracking-widest
+                  <div className="flex flex-col items-end gap-3 w-full md:w-auto mt-4 md:mt-0 pt-4 md:pt-0 border-t md:border-0 border-slate-100 dark:border-slate-700">
+                    <span className={`px-4 py-1.5 rounded-lg text-[10px] sm:text-xs font-bold uppercase tracking-wider
                       ${a.status === 'booked' || a.status === 'rescheduled' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' :
                         a.status === 'reschedule_requested' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' :
                         a.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300' :
@@ -370,13 +370,16 @@ export default function Dashboard() {
                     </span>
 
                     {a.status === 'cancelled' && a.cancellationReason && (
-                       <p className="text-xs text-red-600 dark:text-red-400 font-medium max-w-[200px] text-right truncate" title={a.cancellationReason}>
-                         Reason: {a.cancellationReason}
-                       </p>
+                       <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-xl p-3 mt-1 w-full md:max-w-[240px]">
+                         <p className="text-[10px] text-red-500 uppercase font-bold mb-1">Reason for Cancellation</p>
+                         <p className="text-xs text-red-700 dark:text-red-300 font-medium leading-relaxed">
+                           {a.cancellationReason}
+                         </p>
+                       </div>
                     )}
 
                     {a.status === 'reschedule_requested' && (
-                       <p className="text-xs text-purple-600 dark:text-purple-400 font-medium max-w-[200px] text-right mt-1">
+                       <p className="text-[10px] text-purple-600 dark:text-purple-400 font-bold bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg border border-purple-100 dark:border-purple-800/30">
                          Requested: {new Date(a.requestedDate).toLocaleDateString()} at {a.requestedTime}
                        </p>
                     )}
@@ -388,20 +391,20 @@ export default function Dashboard() {
                             href={a.meetingLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-indigo-600 dark:text-indigo-400 font-bold text-sm bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-600 hover:text-white px-4 py-2 rounded-xl transition-all duration-300 border border-indigo-100 dark:border-indigo-800"
+                            className="text-white font-bold text-xs bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-xl transition-all shadow-md shadow-indigo-200 dark:shadow-none"
                           >
                             📹 Join Call
                           </a>
                         )}
                         <button
                           onClick={() => setRescheduleModalData(a._id)}
-                          className="text-blue-600 dark:text-blue-400 font-bold text-sm hover:text-white hover:bg-blue-600 px-4 py-2 rounded-xl transition-all duration-300 border border-blue-200 dark:border-blue-800/50"
+                          className="text-blue-600 dark:text-blue-400 font-bold text-xs hover:bg-blue-50 dark:hover:bg-blue-900/30 px-3 py-2 rounded-xl transition-all border border-blue-200 dark:border-blue-800/50"
                         >
                           Reschedule
                         </button>
                         <button
                           onClick={() => setCancelModalData(a._id)}
-                          className="text-red-600 dark:text-red-400 font-bold text-sm hover:text-white hover:bg-red-600 px-4 py-2 rounded-xl transition-all duration-300 border border-red-200 dark:border-red-800/50"
+                          className="text-red-600 dark:text-red-400 font-bold text-xs hover:bg-red-50 dark:hover:bg-red-900/30 px-3 py-2 rounded-xl transition-all border border-red-200 dark:border-red-800/50"
                         >
                           Cancel
                         </button>
@@ -409,12 +412,13 @@ export default function Dashboard() {
                     )}
 
                     {(a.status === "completed" || a.status === "cancelled") && (
-                      <div className="flex justify-end mt-2">
+                      <div className="flex items-center gap-4 mt-2">
                         <button
                           onClick={() => deleteAppointment(a._id)}
-                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 font-bold text-xs flex items-center gap-1 transition-colors"
+                          className="text-slate-400 hover:text-red-500 font-bold text-[10px] flex items-center gap-1.5 transition-colors bg-slate-50 dark:bg-slate-900/50 px-3 py-2 rounded-lg border border-slate-100 dark:border-slate-800"
                         >
-                          <span>🗑️</span> Delete Record
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                          Delete Record
                         </button>
                       </div>
                     )}
