@@ -21,7 +21,8 @@ export default function Login() {
       toast.success("Successfully logged in!");
       navigate("/dashboard");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Invalid credentials. Please try again.");
+      const message = err.response?.data?.message || err.message || "Connection failed. Please check your internet or VITE_API_URL.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

@@ -54,7 +54,8 @@ export default function Register() {
       toast.success("Successfully registered! Please login.");
       navigate("/login");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Error registering user.");
+      const message = err.response?.data?.message || err.message || "Registration failed. Please check your connection.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
