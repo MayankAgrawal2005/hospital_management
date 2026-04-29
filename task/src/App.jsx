@@ -27,15 +27,15 @@ function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <Toaster 
-          position="top-center" 
-          reverseOrder={false} 
+        <Toaster
+          position="top-center"
+          reverseOrder={false}
           toastOptions={{
             className: '!bg-white !text-slate-900 dark:!bg-slate-800 dark:!text-white border dark:border-slate-700 shadow-xl',
             duration: 3000,
-            success: { duration: 3000 },
-            error: { duration: 4000 }
-          }} 
+            success: { duration: 2000 },
+            error: { duration: 2000 }
+          }}
         />
         <Routes>
           {/* Public Routes */}
@@ -53,7 +53,7 @@ function App() {
           <Route element={<PrivateRoute allowedRoles={["patient"]} />}>
             <Route path="/book" element={<BookAppointment />} />
           </Route>
-          
+
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

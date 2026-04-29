@@ -21,7 +21,7 @@ exports.getUsers = async (req, res) => {
 exports.updateProfile = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { name, specialization, experience, fees, bio, availableSlots } = req.body;
+    const { name, specialization, experience, fees, bio, availableSlots, leaveDays, phone, dateOfBirth, bloodGroup, gender } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -34,6 +34,11 @@ exports.updateProfile = async (req, res) => {
     if (fees !== undefined) user.fees = Number(fees);
     if (bio !== undefined) user.bio = bio;
     if (availableSlots !== undefined) user.availableSlots = availableSlots;
+    if (leaveDays !== undefined) user.leaveDays = leaveDays;
+    if (phone !== undefined) user.phone = phone;
+    if (dateOfBirth !== undefined) user.dateOfBirth = dateOfBirth;
+    if (bloodGroup !== undefined) user.bloodGroup = bloodGroup;
+    if (gender !== undefined) user.gender = gender;
 
     await user.save();
 

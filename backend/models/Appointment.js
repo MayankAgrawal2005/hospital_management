@@ -15,7 +15,25 @@ const appointmentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
+    enum: ["booked", "completed", "cancelled", "rescheduled", "no_show", "reschedule_requested"],
     default: "booked"
+  },
+  requestedDate: {
+    type: Date,
+    default: null
+  },
+  requestedTime: {
+    type: String,
+    default: null
+  },
+  cancelledBy: {
+    type: String,
+    enum: ["patient", "doctor", "admin", null],
+    default: null
+  },
+  cancellationReason: {
+    type: String,
+    default: null
   }
 });
 

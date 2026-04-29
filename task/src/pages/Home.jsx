@@ -24,7 +24,7 @@ export default function Home() {
       <Navbar />
 
       {/* Hero Section */}
-      <div className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
+      <div className="relative pt-24 pb-16 sm:pt-32 sm:pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-blue-50/50 dark:bg-slate-900/50" />
           <div className="absolute top-0 right-0 -translate-y-12 translate-x-1/3 w-[800px] h-[800px] bg-blue-100/50 dark:bg-blue-900/20 rounded-full blur-3xl opacity-60" />
@@ -40,14 +40,14 @@ export default function Home() {
             Your health, our priority
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-8 leading-tight">
+          <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-6 sm:mb-8 leading-tight">
             Healthcare made <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
               simple & accessible
             </span>
           </h1>
           
-          <p className="text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto mb-8 sm:mb-10 leading-relaxed px-2">
             Book appointments with top-rated doctors, manage your health records,
             and get the care you need instantly, entirely online.
           </p>
@@ -87,7 +87,7 @@ export default function Home() {
           <motion.div 
             initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }}
             variants={staggerContainer}
-            className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center divide-x divide-white/20"
+            className="grid grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8 text-center sm:divide-x divide-white/20"
           >
             {[
               { num: "10,000+", label: "Happy Patients" },
