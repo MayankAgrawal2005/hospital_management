@@ -95,8 +95,15 @@ exports.getAppointments = async (req, res) => {
     let appointments;
 
     if (role === "doctor") {
-      appointments = await Appointment.find({ doctorId: userId })
-        .populate("patientId", "name email");
+      if (req.query.view === "personal") {
+        appointments = await Appointment.find({ patientId: userId })
+          .populate("doctorId", "name email clinicAddress")
+          .sort({ date: -1, time: -1 });
+      } else {
+        appointments = await Appointment.find({ doctorId: userId })
+          .populate("patientId", "name email")
+          .sort({ date: 1, time: 1 });
+      }
     }
     else if (role === "patient") {
       appointments = await Appointment.find({ patientId: userId })

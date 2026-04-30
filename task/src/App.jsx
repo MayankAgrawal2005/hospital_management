@@ -48,8 +48,8 @@ function App() {
             <Route path="/admin" element={<AdminDashboard />} />
           </Route>
 
-          {/* Patient Only Routes */}
-          <Route element={<PrivateRoute allowedRoles={["patient"]} />}>
+          {/* Shared Booking Routes */}
+          <Route element={<PrivateRoute allowedRoles={["patient", "doctor"]} />}>
             <Route path="/book" element={<BookAppointment />} />
           </Route>
 

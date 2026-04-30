@@ -58,7 +58,11 @@ export default function BookAppointment() {
   const fetchDoctors = async () => {
     try {
       const res = await API.get("/users?role=doctor");
-      let fetchedDoctors = res.data;
+      const userStr = localStorage.getItem("user");
+      const currentUser = userStr ? JSON.parse(userStr) : null;
+      
+      // Filter out self if the user is a doctor
+      let fetchedDoctors = res.data.filter(d => d._id !== currentUser?._id);
 
       if (recommendedDoctorId) {
         fetchedDoctors.sort((a, b) => {
@@ -123,6 +127,7 @@ export default function BookAppointment() {
     try {
       await API.post("/appointments", { doctorId, date, time, appointmentType });
       toast.success("Appointment booked successfully!");
+      localStorage.setItem("redirectToMyHealth", "true");
       navigate("/dashboard");
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to book appointment");

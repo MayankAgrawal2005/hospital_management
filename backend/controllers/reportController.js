@@ -37,11 +37,16 @@ exports.getMyReports = async (req, res) => {
   try {
     const userId = req.user.id;
     const role = req.user.role;
+    const { view } = req.query;
 
     let query = {};
     if (role === "doctor") {
-      // Doctors see reports they uploaded OR reports for patients in appointments they have
-      query = { doctorId: userId };
+      if (view === "personal") {
+        query = { patientId: userId };
+      } else {
+        // Doctors see reports they uploaded OR reports for patients in appointments they have
+        query = { doctorId: userId };
+      }
     } else {
       query = { patientId: userId };
     }
@@ -116,11 +121,13 @@ exports.deleteReport = async (req, res) => {
 
     if (!report) return res.status(404).json({ message: "Report not found" });
 
-    // Only uploader can delete
-    const canDelete = (report.uploadedBy === "patient" && report.patientId.toString() === req.user.id) ||
-                      (report.uploadedBy === "doctor" && report.doctorId?.toString() === req.user.id);
+    // Authorization: Only uploader can delete, OR the doctor if they are the one linked to the report
+    const isUploader = (report.uploadedBy === "patient" && report.patientId.toString() === req.user.id) ||
+                       (report.uploadedBy === "doctor" && report.doctorId?.toString() === req.user.id);
 
-    if (!canDelete) return res.status(403).json({ message: "Not authorized to delete this report" });
+    const isLinkedDoctor = (req.user.role === "doctor" && report.doctorId?.toString() === req.user.id);
+
+    if (!isUploader && !isLinkedDoctor) return res.status(403).json({ message: "Not authorized to delete this report" });
 
     // Optional: Delete from cloudinary too
     try {

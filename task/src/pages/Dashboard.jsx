@@ -89,6 +89,17 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeletePrescription = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this prescription?")) return;
+    try {
+      await API.delete(`/prescriptions/${id}`);
+      toast.success("Prescription deleted");
+      fetchPrescriptions();
+    } catch {
+      toast.error("Failed to delete prescription");
+    }
+  };
+
   const fetchAppointments = async () => {
     try {
       const res = await API.get("/appointments");
@@ -473,12 +484,20 @@ export default function Dashboard() {
                       </p>
                     </div>
 
-                    <button 
-                      onClick={() => generatePrescriptionPDF(pres)}
-                      className="w-full py-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-blue-600 dark:text-blue-400 rounded-2xl font-bold text-sm transition-all border border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2"
-                    >
-                      📥 Download PDF
-                    </button>
+                    <div className="grid grid-cols-2 gap-3 mt-auto">
+                      <button 
+                        onClick={() => generatePrescriptionPDF(pres)}
+                        className="py-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 rounded-2xl font-bold text-xs transition-all border border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2"
+                      >
+                        📥 PDF
+                      </button>
+                      <button 
+                        onClick={() => handleDeletePrescription(pres._id)}
+                        className="py-3 bg-red-50 dark:bg-red-900/10 hover:bg-red-600 hover:text-white text-red-600 dark:text-red-400 rounded-2xl font-bold text-xs transition-all border border-red-100 dark:border-red-900/30 flex items-center justify-center gap-2"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
                   </motion.div>
                 ))}
               </div>

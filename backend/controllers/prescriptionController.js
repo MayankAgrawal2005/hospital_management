@@ -71,10 +71,15 @@ exports.getMyPrescriptions = async (req, res) => {
   try {
     const userId = req.user.id;
     const role = req.user.role;
+    const { view } = req.query;
 
     let query = {};
     if (role === "doctor") {
-      query = { doctorId: userId };
+      if (view === "personal") {
+        query = { patientId: userId, status: "final" };
+      } else {
+        query = { doctorId: userId };
+      }
     } else {
       query = { patientId: userId, status: "final" };
     }
@@ -85,6 +90,30 @@ exports.getMyPrescriptions = async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(prescriptions);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deletePrescription = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const prescription = await Prescription.findById(id);
+
+    if (!prescription) {
+      return res.status(404).json({ message: "Prescription not found" });
+    }
+
+    // Authorization check: Only the issuing doctor or the patient can delete (per user request)
+    const isOwner = (prescription.doctorId.toString() === req.user.id) || 
+                    (prescription.patientId.toString() === req.user.id);
+
+    if (!isOwner) {
+      return res.status(403).json({ message: "Not authorized to delete this prescription" });
+    }
+
+    await Prescription.findByIdAndDelete(id);
+    res.json({ message: "Prescription deleted successfully" });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

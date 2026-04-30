@@ -29,7 +29,8 @@ export default function DoctorDashboard() {
     }
   }, []);
 
-  const [appointments, setAppointments] = useState([]);
+   const [appointments, setAppointments] = useState([]);
+  const [personalAppointments, setPersonalAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   
   // Custom Calendar & Advanced Scheduling State
@@ -46,14 +47,25 @@ export default function DoctorDashboard() {
   const [isEditing, setIsEditing] = useState(false);
   const [isEditingSecurity, setIsEditingSecurity] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeView, setActiveView] = useState("overview"); // overview, prescriptions, reports
+  const [activeView, setActiveView] = useState("overview");
+
+  useEffect(() => {
+    const redirect = localStorage.getItem("redirectToMyHealth");
+    if (redirect === "true") {
+      setActiveView("my-health");
+      localStorage.removeItem("redirectToMyHealth");
+    }
+  }, []); // overview, prescriptions, reports
   const [prescriptionApptId, setPrescriptionApptId] = useState(null);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [personalPrescriptions, setPersonalPrescriptions] = useState([]);
   const [reports, setReports] = useState([]);
+  const [personalReports, setPersonalReports] = useState([]);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [previewReport, setPreviewReport] = useState(null);
   const [editingReport, setEditingReport] = useState(null);
   const [reportFilter, setReportFilter] = useState({ search: "", type: "All" });
+  const [myHealthTab, setMyHealthTab] = useState("appointments"); // appointments, prescriptions, reports
   const [savingProfile, setSavingProfile] = useState(false);
   const [customSlot, setCustomSlot] = useState("");
   const [editForm, setEditForm] = useState({
@@ -70,9 +82,30 @@ export default function DoctorDashboard() {
 
   useEffect(() => {
     fetchAppointments();
+    fetchPersonalAppointments();
     fetchPrescriptions();
+    fetchPersonalPrescriptions();
     fetchReports();
+    fetchPersonalReports();
   }, []);
+
+  const fetchPersonalPrescriptions = async () => {
+    try {
+      const res = await API.get("/prescriptions/my?view=personal");
+      setPersonalPrescriptions(res.data);
+    } catch {
+      console.error("Failed to fetch personal prescriptions");
+    }
+  };
+
+  const fetchPersonalReports = async () => {
+    try {
+      const res = await API.get("/reports/my?view=personal");
+      setPersonalReports(res.data);
+    } catch {
+      console.error("Failed to fetch personal reports");
+    }
+  };
 
   const fetchReports = async () => {
     try {
@@ -118,6 +151,18 @@ export default function DoctorDashboard() {
     }
   };
 
+  const handleDeletePrescription = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this prescription?")) return;
+    try {
+      await API.delete(`/prescriptions/${id}`);
+      toast.success("Prescription deleted");
+      fetchPrescriptions();
+      fetchPersonalPrescriptions();
+    } catch {
+      toast.error("Failed to delete prescription");
+    }
+  };
+
   const fetchAppointments = async () => {
     try {
       const res = await API.get("/appointments");
@@ -129,6 +174,15 @@ export default function DoctorDashboard() {
     }
   };
 
+  const fetchPersonalAppointments = async () => {
+    try {
+      const res = await API.get("/appointments?view=personal");
+      setPersonalAppointments(res.data);
+    } catch {
+      console.error("Failed to fetch personal appointments");
+    }
+  };
+
   const completeAppointment = async (id) => {
     try {
       await API.put(`/appointments/${id}/complete`);
@@ -136,7 +190,7 @@ export default function DoctorDashboard() {
       fetchAppointments();
       setPrescriptionApptId(id); // Open prescription form automatically
     } catch {
-      toast.error("Failed to complete appointment");
+      toast.error("Failed to update status");
     }
   };
 
@@ -578,6 +632,14 @@ export default function DoctorDashboard() {
           >
             <span>📂</span> Patient Reports
           </button>
+          <div className="pt-4 border-t border-slate-100 dark:border-white/5 mt-4">
+             <button
+              onClick={() => { setActiveView("my-health"); setSidebarOpen(false); }}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all font-bold ${activeView === "my-health" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/30" : "text-gray-500 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
+            >
+              <span>🏥</span> My Health
+            </button>
+          </div>
         </nav>
 
         <div className="p-6 space-y-3">
@@ -598,268 +660,436 @@ export default function DoctorDashboard() {
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-72 w-full overflow-x-hidden p-4 sm:p-8 lg:p-12 min-h-screen pt-20 lg:pt-8">
-        {activeView === "overview" ? (
+        {activeView === "overview" && (
           <>
             <header className="mb-10">
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
                 Practice Overview
               </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">
-            Manage your appointments and patients interactively.
-          </p>
-        </header>
+              <p className="text-gray-500 dark:text-gray-400 text-base sm:text-lg">
+                Manage your appointments and patients interactively.
+              </p>
+            </header>
 
-        {/* Stats */}
-        {loading ? (
-          <SkeletonStats />
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12"
-          >
-            <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm transition-shadow hover:shadow-md">
-              <p className="text-gray-500 dark:text-gray-400 font-medium mb-1 text-sm">Total</p>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
-                {total}
-              </h2>
+            {/* Stats */}
+            {loading ? (
+              <SkeletonStats />
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-8 sm:mb-12"
+              >
+                <div className="bg-white dark:bg-slate-800 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm transition-shadow hover:shadow-md">
+                  <p className="text-gray-500 dark:text-gray-400 font-medium mb-1 text-sm">Total</p>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white">
+                    {total}
+                  </h2>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-amber-100 dark:border-amber-900/50 transition-shadow hover:shadow-md">
+                  <p className="text-amber-700 dark:text-amber-400 font-medium mb-1 text-sm">Booked</p>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-amber-900 dark:text-amber-300">
+                    {booked}
+                  </h2>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-green-100 dark:border-green-900/50 transition-shadow hover:shadow-md">
+                  <p className="text-green-700 dark:text-green-400 font-medium mb-1 text-sm">Completed</p>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-green-900 dark:text-green-300">
+                    {completed}
+                  </h2>
+                </div>
+                <div className="bg-red-50 dark:bg-red-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-red-100 dark:border-red-900/50 transition-shadow hover:shadow-md">
+                  <p className="text-red-700 dark:text-red-400 font-medium mb-1 text-sm">Cancelled</p>
+                  <h2 className="text-3xl sm:text-4xl font-extrabold text-red-900 dark:text-red-300">
+                    {cancelled}
+                  </h2>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Calendar Section */}
+            <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm p-4 sm:p-6 mb-20">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
+                  Interactive Schedule
+                </h2>
+                <div className="flex gap-2 items-center bg-slate-50 dark:bg-slate-700 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-inner">
+                  <button onClick={prevMonth} className="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-600 hover:bg-slate-100 dark:hover:bg-slate-500 rounded-xl shadow-sm transition-colors text-gray-600 dark:text-gray-300 font-bold text-sm">
+                    ←
+                  </button>
+                  <h3 className="text-sm sm:text-base font-bold text-gray-800 dark:text-gray-200 w-28 sm:w-36 text-center tracking-wide">
+                    {format(currentMonth, 'MMM yyyy')}
+                  </h3>
+                  <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-600 hover:bg-slate-100 dark:hover:bg-slate-500 rounded-xl shadow-sm transition-colors text-gray-600 dark:text-gray-300 font-bold text-sm">
+                    →
+                  </button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="h-[300px] sm:h-[500px] bg-slate-100 dark:bg-slate-700/50 rounded-2xl animate-pulse border border-slate-200/50 dark:border-slate-600"></div>
+              ) : (
+                <div className="overflow-x-auto -mx-1">
+                  <div className="min-w-[560px] grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-700 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
+                    {/* Days Header */}
+                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                      <div key={day} className="bg-slate-50 dark:bg-slate-800 py-3 text-center text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-slate-200 dark:border-slate-700">
+                        {day}
+                      </div>
+                    ))}
+
+                    {/* Calendar Grid */}
+                    {calendarDays.map((day, idx) => {
+                      const dayAppts = getAppointmentsForDay(day);
+                      const hasBookings = dayAppts.some(a => a.status === 'booked');
+                      const isCurrentMonth = isSameMonth(day, currentMonth);
+
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => setSelectedDate(day)}
+                          className={`min-h-[120px] bg-white dark:bg-slate-800 p-3 transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/80 flex flex-col group
+                            ${!isCurrentMonth ? 'text-gray-300 dark:text-gray-600 bg-slate-50/50 dark:bg-slate-800/30' : 'text-gray-800 dark:text-gray-200'}
+                            ${hasBookings && isCurrentMonth ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
+                          `}
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full transition-colors
+                              ${isSameDay(day, new Date()) ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'group-hover:bg-slate-200 dark:group-hover:bg-slate-600'}
+                            `}>
+                              {format(day, 'd')}
+                            </span>
+                            {dayAppts.length > 0 && (
+                              <span className="text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/60 px-2 py-0.5 rounded-full shadow-sm border border-blue-200/50 dark:border-blue-800/50">
+                                {dayAppts.length}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex-1 flex flex-col justify-end gap-1">
+                            {hasBookings && (
+                              <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 uppercase tracking-wide bg-blue-50/80 dark:bg-blue-900/30 px-2 py-1 rounded-md">
+                                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Booked
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-amber-100 dark:border-amber-900/50 transition-shadow hover:shadow-md">
-              <p className="text-amber-700 dark:text-amber-400 font-medium mb-1 text-sm">Booked</p>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-amber-900 dark:text-amber-300">
-                {booked}
-              </h2>
-            </div>
-            <div className="bg-green-50 dark:bg-green-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-green-100 dark:border-green-900/50 transition-shadow hover:shadow-md">
-              <p className="text-green-700 dark:text-green-400 font-medium mb-1 text-sm">Completed</p>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-green-900 dark:text-green-300">
-                {completed}
-              </h2>
-            </div>
-            <div className="bg-red-50 dark:bg-red-900/20 p-4 sm:p-6 rounded-2xl sm:rounded-3xl border border-red-100 dark:border-red-900/50 transition-shadow hover:shadow-md">
-              <p className="text-red-700 dark:text-red-400 font-medium mb-1 text-sm">Cancelled</p>
-              <h2 className="text-3xl sm:text-4xl font-extrabold text-red-900 dark:text-red-300">
-                {cancelled}
-              </h2>
-            </div>
-          </motion.div>
+          </>
         )}
 
-        {/* Calendar Section */}
-        <div className="bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm p-4 sm:p-6 mb-20">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-              Interactive Schedule
-            </h2>
-            <div className="flex gap-2 items-center bg-slate-50 dark:bg-slate-700 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-600 shadow-inner">
-              <button onClick={prevMonth} className="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-600 hover:bg-slate-100 dark:hover:bg-slate-500 rounded-xl shadow-sm transition-colors text-gray-600 dark:text-gray-300 font-bold text-sm">
-                ←
-              </button>
-              <h3 className="text-sm sm:text-base font-bold text-gray-800 dark:text-gray-200 w-28 sm:w-36 text-center tracking-wide">
-                {format(currentMonth, 'MMM yyyy')}
-              </h3>
-              <button onClick={nextMonth} className="w-9 h-9 flex items-center justify-center bg-white dark:bg-slate-600 hover:bg-slate-100 dark:hover:bg-slate-500 rounded-xl shadow-sm transition-colors text-gray-600 dark:text-gray-300 font-bold text-sm">
-                →
-              </button>
-            </div>
-          </div>
+        {activeView === "prescriptions" && (
+          <div className="space-y-8">
+            <header>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Prescription Records</h1>
+              <p className="text-gray-500 dark:text-gray-400">View and manage all prescriptions you've issued to patients.</p>
+            </header>
 
-          {loading ? (
-            <div className="h-[300px] sm:h-[500px] bg-slate-100 dark:bg-slate-700/50 rounded-2xl animate-pulse border border-slate-200/50 dark:border-slate-600"></div>
-          ) : (
-            <div className="overflow-x-auto -mx-1">
-            <div className="min-w-[560px] grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-700 rounded-2xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
-               {/* Days Header */}
-               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                 <div key={day} className="bg-slate-50 dark:bg-slate-800 py-3 text-center text-xs sm:text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest border-b border-slate-200 dark:border-slate-700">
-                   {day}
-                 </div>
-               ))}
-               
-               {/* Calendar Grid */}
-               {calendarDays.map((day, idx) => {
-                  const dayAppts = getAppointmentsForDay(day);
-                  const hasBookings = dayAppts.some(a => a.status === 'booked');
-                  const isCurrentMonth = isSameMonth(day, currentMonth);
-                  
-                  return (
-                    <div
-                      key={idx}
-                      onClick={() => setSelectedDate(day)}
-                      className={`min-h-[120px] bg-white dark:bg-slate-800 p-3 transition-all cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/80 flex flex-col group
-                        ${!isCurrentMonth ? 'text-gray-300 dark:text-gray-600 bg-slate-50/50 dark:bg-slate-800/30' : 'text-gray-800 dark:text-gray-200'}
-                        ${hasBookings && isCurrentMonth ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}
-                      `}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full transition-colors
-                          ${isSameDay(day, new Date()) ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30' : 'group-hover:bg-slate-200 dark:group-hover:bg-slate-600'}
-                        `}>
-                          {format(day, 'd')}
-                        </span>
-                        {dayAppts.length > 0 && (
-                          <span className="text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/60 px-2 py-0.5 rounded-full shadow-sm border border-blue-200/50 dark:border-blue-800/50">
-                            {dayAppts.length}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex-1 flex flex-col justify-end gap-1">
-                        {hasBookings && (
-                          <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 uppercase tracking-wide bg-blue-50/80 dark:bg-blue-900/30 px-2 py-1 rounded-md">
-                            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> Booked
-                          </div>
-                        )}
+            {prescriptions.length === 0 ? (
+              <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                <div className="text-6xl mb-6">📝</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">No prescriptions issued yet</h3>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {prescriptions.map((pres) => (
+                  <div key={pres._id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex gap-2 mt-auto pt-4 border-t border-slate-100 dark:border-slate-700/50">
+                        <button onClick={() => setPrescriptionApptId(pres.appointmentId)} className="flex-1 py-2 text-[10px] font-bold text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">Edit</button>
+                        <button onClick={() => handleDeletePrescription(pres._id)} className="flex-1 py-2 text-[10px] font-bold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">Delete</button>
                       </div>
                     </div>
-                  )
-               })}
-            </div>
-            </div>
-          )}
-        </div>
-      </>
-    ) : activeView === "prescriptions" ? (
-        <div className="space-y-8">
-          <header>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Prescription Records</h1>
-            <p className="text-gray-500 dark:text-gray-400">View and manage all prescriptions you've issued to patients.</p>
-          </header>
-
-          {prescriptions.length === 0 ? (
-            <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
-              <div className="text-6xl mb-6">📝</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">No prescriptions issued yet</h3>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {prescriptions.map((pres) => (
-                <div key={pres._id} className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all">
-                   <div className="flex justify-between items-start mb-4">
-                      <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${pres.status === 'final' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {pres.status}
-                      </span>
-                      <button onClick={() => setPrescriptionApptId(pres.appointmentId)} className="text-blue-600 dark:text-blue-400 text-xs font-bold hover:underline">Edit →</button>
-                   </div>
-                   <h4 className="font-bold text-gray-900 dark:text-white">{pres.patientId?.name}</h4>
-                   <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{new Date(pres.createdAt).toLocaleDateString()}</p>
-                   <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-6 italic">"{pres.notes}"</p>
-                   <button 
-                     onClick={() => generatePrescriptionPDF(pres)}
-                     className="w-full py-2.5 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all border border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2"
-                   >
-                     📄 View PDF
-                   </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-8">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Medical Reports</h1>
-              <p className="text-gray-500 dark:text-gray-400">Review and upload patient diagnostic reports.</p>
-            </div>
-            <button 
-              onClick={() => setShowUploadModal(true)}
-              className="px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
-            >
-              <span>➕</span> Upload For Patient
-            </button>
-          </div>
-
-          {/* Filters */}
-          <div className="flex flex-wrap gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
-            <input 
-              placeholder="Search patients or report names..."
-              className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none"
-              value={reportFilter.search}
-              onChange={(e) => setReportFilter({...reportFilter, search: e.target.value})}
-            />
-            <select 
-              className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
-              value={reportFilter.type}
-              onChange={(e) => setReportFilter({...reportFilter, type: e.target.value})}
-            >
-              {["All", "Blood Test", "Sonography", "X-Ray", "MRI", "CT Scan", "Vaccination", "Other"].map(t => (
-                <option key={t} value={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-
-          {reports.length === 0 ? (
-            <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
-              <div className="text-6xl mb-6">📂</div>
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">No patient reports found</h3>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {reports
-                .filter(r => (reportFilter.type === "All" || r.reportType === reportFilter.type) && (r.reportName.toLowerCase().includes(reportFilter.search.toLowerCase()) || r.patientId?.name.toLowerCase().includes(reportFilter.search.toLowerCase())))
-                .map((report) => (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  key={report._id}
-                  className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xl flex items-center justify-center">
-                      {report.fileUrl.toLowerCase().endsWith(".pdf") ? "📄" : "🖼️"}
-                    </div>
-                    <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
-                      {report.reportType}
-                    </span>
-                  </div>
-                  <h4 className="font-bold text-gray-900 dark:text-white mb-0.5 truncate">{report.reportName}</h4>
-                  <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-4 truncate">{report.patientId?.name}</p>
-                  
-                  <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 mb-6">
-                    <span>Uploaded: {new Date(report.date).toLocaleDateString()}</span>
-                    <span className="font-bold text-slate-700 dark:text-slate-300 capitalize">Source: {report.uploadedBy}</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <button 
-                      onClick={() => setPreviewReport(report)}
-                      className="py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-bold text-[10px] transition-all"
+                    <h4 className="font-bold text-gray-900 dark:text-white">{pres.patientId?.name}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{new Date(pres.createdAt).toLocaleDateString()}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-6 italic">"{pres.notes}"</p>
+                    <button
+                      onClick={() => generatePrescriptionPDF(pres)}
+                      className="w-full py-2.5 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-sm transition-all border border-slate-100 dark:border-slate-700 flex items-center justify-center gap-2"
                     >
-                      Preview
+                      📄 View PDF
                     </button>
-                    <a 
-                      href={report.fileUrl}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 rounded-lg font-bold text-[10px] text-center transition-all"
-                    >
-                      Download
-                    </a>
                   </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
-                  {report.uploadedBy === "doctor" && report.doctorId?._id === user._id && (
-                    <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                      <button 
-                        onClick={() => setEditingReport(report)}
-                        className="flex-1 py-1.5 text-[9px] font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1"
-                      >
-                        ✏️ Edit
-                      </button>
-                      <button 
-                        onClick={() => handleDeleteReport(report._id)}
-                        className="flex-1 py-1.5 text-[9px] font-bold text-slate-500 hover:text-red-600 transition-colors flex items-center justify-center gap-1"
-                      >
-                        🗑️ Delete
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
+        {activeView === "reports" && (
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">Medical Reports</h1>
+                <p className="text-gray-500 dark:text-gray-400">Review and upload patient diagnostic reports.</p>
+              </div>
+              <button
+                onClick={() => setShowUploadModal(true)}
+                className="px-6 py-3 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+              >
+                <span>➕</span> Upload For Patient
+              </button>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-4 bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
+              <input
+                placeholder="Search patients or report names..."
+                className="flex-1 min-w-[200px] bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none"
+                value={reportFilter.search}
+                onChange={(e) => setReportFilter({ ...reportFilter, search: e.target.value })}
+              />
+              <select
+                className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/50 outline-none cursor-pointer"
+                value={reportFilter.type}
+                onChange={(e) => setReportFilter({ ...reportFilter, type: e.target.value })}
+              >
+                {["All", "Blood Test", "Sonography", "X-Ray", "MRI", "CT Scan", "Vaccination", "Other"].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            {reports.length === 0 ? (
+              <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                <div className="text-6xl mb-6">📂</div>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">No patient reports found</h3>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {reports
+                  .filter(r => (reportFilter.type === "All" || r.reportType === reportFilter.type) && (r.reportName.toLowerCase().includes(reportFilter.search.toLowerCase()) || r.patientId?.name.toLowerCase().includes(reportFilter.search.toLowerCase())))
+                  .map((report) => (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      key={report._id}
+                      className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/50 text-xl flex items-center justify-center">
+                          {report.fileUrl.toLowerCase().endsWith(".pdf") ? "📄" : "🖼️"}
+                        </div>
+                        <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">
+                          {report.reportType}
+                        </span>
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white mb-0.5 truncate">{report.reportName}</h4>
+                      <p className="text-xs font-medium text-blue-600 dark:text-blue-400 mb-4 truncate">{report.patientId?.name}</p>
+
+                      <div className="flex justify-between items-center text-[10px] text-gray-500 dark:text-gray-400 mb-6">
+                        <span>Uploaded: {new Date(report.date).toLocaleDateString()}</span>
+                        <span className="font-bold text-slate-700 dark:text-slate-300 capitalize">Source: {report.uploadedBy}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mb-3">
+                        <button
+                          onClick={() => setPreviewReport(report)}
+                          className="py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-bold text-[10px] transition-all"
+                        >
+                          Preview
+                        </button>
+                        <a
+                          href={report.fileUrl}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="py-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-600 hover:text-white text-blue-600 dark:text-blue-400 rounded-lg font-bold text-[10px] text-center transition-all"
+                        >
+                          Download
+                        </a>
+                      </div>
+
+                      {(report.uploadedBy === "doctor" || report.doctorId?._id === user._id) && (
+                        <div className="flex gap-2 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                          {report.uploadedBy === "doctor" && report.doctorId?._id === user._id && (
+                            <button
+                              onClick={() => setEditingReport(report)}
+                              className="flex-1 py-1.5 text-[9px] font-bold text-slate-500 hover:text-blue-600 transition-colors flex items-center justify-center gap-1"
+                            >
+                              ✏️ Edit
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDeleteReport(report._id)}
+                            className="flex-1 py-1.5 text-[9px] font-bold text-slate-500 hover:text-red-600 transition-colors flex items-center justify-center gap-1"
+                          >
+                            🗑️ Delete
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeView === "my-health" && (
+          <div className="space-y-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">My Healthcare</h1>
+                <p className="text-gray-500 dark:text-gray-400">View and manage your personal appointments with other doctors.</p>
+              </div>
+              <Link
+                to="/book"
+                className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:-translate-y-1 transition-all flex items-center gap-2"
+              >
+                <span>➕</span> Book for Myself
+              </Link>
+            </div>
+
+            {/* My Health Sub-Tabs */}
+            <div className="flex gap-6 border-b border-slate-200 dark:border-slate-800 pb-px">
+              <button 
+                onClick={() => setMyHealthTab("appointments")}
+                className={`pb-4 px-1 font-bold text-sm transition-all relative ${myHealthTab === "appointments" ? "text-indigo-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+              >
+                Appointments
+                {myHealthTab === "appointments" && <motion.div layoutId="myHealthTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full" />}
+              </button>
+              <button 
+                onClick={() => setMyHealthTab("prescriptions")}
+                className={`pb-4 px-1 font-bold text-sm transition-all relative ${myHealthTab === "prescriptions" ? "text-indigo-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+              >
+                My Prescriptions
+                {myHealthTab === "prescriptions" && <motion.div layoutId="myHealthTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full" />}
+              </button>
+              <button 
+                onClick={() => setMyHealthTab("reports")}
+                className={`pb-4 px-1 font-bold text-sm transition-all relative ${myHealthTab === "reports" ? "text-indigo-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"}`}
+              >
+                My Reports
+                {myHealthTab === "reports" && <motion.div layoutId="myHealthTab" className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-full" />}
+              </button>
+            </div>
+
+            {myHealthTab === "appointments" && (
+              personalAppointments.length === 0 ? (
+                <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                  <div className="text-6xl mb-6">🩺</div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">No personal appointments yet</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">Need to see a doctor? Use the button above to book.</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {personalAppointments.map((appt) => (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      key={appt._id}
+                      className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider
+                          ${appt.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            appt.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                              'bg-amber-100 text-amber-700'}`}>
+                          {appt.status}
+                        </span>
+                        <div className="text-[10px] font-bold text-slate-400">
+                          {new Date(appt.date).toLocaleDateString('en-US', { timeZone: 'UTC', year: 'numeric', month: 'numeric', day: 'numeric' })}
+                        </div>
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white truncate">
+                        Dr. {appt.doctorId?.name || "Deleted User"}
+                      </h4>
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-3 truncate">
+                        {appt.doctorId?.email || "No email available"}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-4">
+                        <span>🕒 {appt.time}</span>
+                        <span>•</span>
+                        <span className="truncate flex-1">📍 {appt.doctorId?.clinicAddress || "Clinic Address Not Set"}</span>
+                      </div>
+                      {appt.status !== 'cancelled' && appt.status !== 'completed' && (
+                        <button
+                          onClick={() => { setCancelModalData(appt._id); }}
+                          className="w-full py-2 bg-red-50 dark:bg-red-900/10 hover:bg-red-100 text-red-600 rounded-xl text-[10px] font-bold transition-all border border-red-100 dark:border-red-900/30"
+                        >
+                          Cancel Appointment
+                        </button>
+                      )}
+                    </motion.div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {myHealthTab === "prescriptions" && (
+              personalPrescriptions.length === 0 ? (
+                <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                  <div className="text-6xl mb-6">📄</div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">No prescriptions yet</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">Your personal medical prescriptions will appear here.</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {personalPrescriptions.map((pres) => (
+                    <motion.div 
+                      key={pres._id} 
+                      initial={{ opacity: 0, scale: 0.95 }} 
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex flex-col"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-xl">📝</div>
+                        <span className="bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider">Final</span>
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white truncate">Dr. {pres.doctorId?.name}</h4>
+                      <p className="text-[10px] text-gray-500 mb-4">{new Date(pres.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 italic mb-6 line-clamp-2">"{pres.notes}"</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => generatePrescriptionPDF(pres)} className="py-2 bg-indigo-600 text-white rounded-lg font-bold text-[10px] hover:bg-indigo-500 transition-colors">PDF</button>
+                        <button onClick={() => handleDeletePrescription(pres._id)} className="py-2 bg-red-50 text-red-600 rounded-lg font-bold text-[10px] hover:bg-red-600 hover:text-white transition-colors">Delete</button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {myHealthTab === "reports" && (
+              personalReports.length === 0 ? (
+                <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-700">
+                  <div className="text-6xl mb-6">📂</div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">No reports found</h3>
+                  <p className="text-gray-500 dark:text-gray-400 mt-2">Upload your personal medical reports to keep them safe.</p>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {personalReports.map((report) => (
+                    <motion.div 
+                      key={report._id} 
+                      initial={{ opacity: 0, scale: 0.95 }} 
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all flex flex-col"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center text-xl">
+                          {report.fileUrl.toLowerCase().endsWith(".pdf") ? "📄" : "🖼️"}
+                        </div>
+                        <span className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider">{report.reportType}</span>
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white truncate">{report.reportName}</h4>
+                      <p className="text-[10px] text-gray-500 mb-6">{new Date(report.date).toLocaleDateString()}</p>
+                      <div className="grid grid-cols-3 gap-1">
+                        <button onClick={() => setPreviewReport(report)} className="py-2 bg-slate-100 text-slate-700 rounded-lg font-bold text-[9px]">Preview</button>
+                        <a href={report.fileUrl} download target="_blank" rel="noreferrer" className="py-2 bg-indigo-50 text-indigo-700 rounded-lg font-bold text-[9px] text-center">Download</a>
+                        <button onClick={() => handleDeleteReport(report._id)} className="py-2 bg-red-50 text-red-600 rounded-lg font-bold text-[9px]">Delete</button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+        )}
       </main>
 
       <AnimatePresence>
