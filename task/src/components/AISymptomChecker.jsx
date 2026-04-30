@@ -182,18 +182,19 @@ export default function AISymptomChecker() {
             </div>
 
             {/* Input Area */}
-            <div className="p-6 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <div className="p-6 bg-white dark:bg-[#0f172a] border-t border-slate-100 dark:border-slate-800 shrink-0">
               <form onSubmit={handleTriage} className="flex gap-2">
                 <input
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
                   placeholder="Describe your symptoms..."
-                  className="flex-1 bg-slate-50 dark:bg-slate-850 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900 dark:text-white transition-all shadow-inner"
+                  className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900 dark:text-slate-100 transition-all shadow-inner placeholder:text-slate-400 dark:placeholder:text-slate-500"
+                  style={{ colorScheme: 'auto' }}
                 />
                 <button
                   type="submit"
                   disabled={loading || !symptoms.trim()}
-                  className="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-2xl flex items-center justify-center transition-all shadow-lg shadow-indigo-500/20 disabled:shadow-none active:scale-95"
+                  className="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-200 dark:disabled:bg-slate-800 text-white rounded-2xl flex items-center justify-center transition-all shadow-lg shadow-indigo-500/20 disabled:shadow-none active:scale-95 shrink-0"
                 >
                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
